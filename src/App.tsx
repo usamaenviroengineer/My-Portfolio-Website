@@ -8,6 +8,7 @@ import ServicesView from './components/ServicesView';
 import PortfolioView from './components/PortfolioView';
 import ExperienceView from './components/ExperienceView';
 import ContactView from './components/ContactView';
+import AdminView from './components/AdminView';
 import { ThemeProvider, useTheme } from './ThemeContext';
 import { PortfolioDataProvider } from './PortfolioDataContext';
 
@@ -18,10 +19,11 @@ function MainApp() {
   // URL Path synchronization (Clean SEO Path Routing with Hash migration)
   useEffect(() => {
     const parsePath = () => {
+      const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'contact', 'admin-usama'];
+      
       // 1. Migrating legacy Hash links to clean Pathname links transparently
       if (window.location.hash) {
         const hash = window.location.hash.replace('#/', '').replace('#', '');
-        const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'contact'];
         if (hash && validPages.includes(hash)) {
           const cleanPath = hash === 'home' ? '/' : `/${hash}`;
           window.history.replaceState(null, '', cleanPath);
@@ -33,7 +35,6 @@ function MainApp() {
       // 2. Standard path-based routing
       const pathname = window.location.pathname;
       const route = pathname.replace(/^\/+/, '').replace(/\/+$/, '');
-      const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'contact'];
       
       if (!route) {
         setActivePage('home');
@@ -72,6 +73,8 @@ function MainApp() {
         return <ExperienceView />;
       case 'contact':
         return <ContactView />;
+      case 'admin-usama':
+        return <AdminView />;
       case 'home':
       default:
         return <HomeView onNavigate={handleNavigate} />;
@@ -79,6 +82,26 @@ function MainApp() {
   };
 
   const isLight = theme === 'light';
+  const showChrome = activePage !== 'admin-usama';
+
+  if (!showChrome) {
+    return (
+      <div className="bg-[#070708] min-h-screen text-white selection:bg-[#00C853] selection:text-black">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activePage}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="w-full"
+          >
+            {renderActiveView()}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen transition-colors duration-500 flex flex-col justify-between relative ${
