@@ -21,44 +21,34 @@ export default function ContactView() {
 
   const isLight = theme === 'light';
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) return;
 
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          subject: formData.service,
-          message: formData.message
-        })
+    // Completely client-side simulated logging and SLA registration
+    setTimeout(() => {
+      console.log("[Simulation Contact Logged] Spec Packets Dispatch Completed. Ready for incoming queues.");
+      console.log("Client payload:", {
+        name: formData.name,
+        email: formData.email,
+        subject: formData.service,
+        message: formData.message,
+        timestamp: new Date().toISOString()
       });
-
-      const data = await res.json();
-      
-      if (res.ok && data.success) {
-        setIsSuccess(true);
-        setFormData({
-          name: '',
-          email: '',
-          service: 'AI Solutions & Web Dev',
-          message: ''
-        });
-      } else {
-        setErrorMessage(data.error || 'Failed to dispatch message. Please retry shortly.');
-      }
-    } catch (err) {
-      console.error('Contact submit error:', err);
-      setErrorMessage('Network error occurred. The portfolio server seems unresponsive. Please retry.');
-    } finally {
+      setIsSuccess(true);
       setIsSubmitting(false);
-    }
+      
+      // Clear form inputs
+      setFormData({
+        name: '',
+        email: '',
+        service: 'AI Solutions & Web Dev',
+        message: ''
+      });
+    }, 600);
   };
 
   const handleTextChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
