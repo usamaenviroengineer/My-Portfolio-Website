@@ -139,9 +139,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       console.error(`Critical exception in upsertConfigHelper for key [${key}]:`, err);
       return false;
     }
-  };
-
-  // Load configuration and dynamic tables from Supabase on init
+  };  // Load configuration and dynamic tables from Supabase on init
   useEffect(() => {
     async function loadPortfolioData() {
       if (!isSupabaseConfigured || !supabase) {
@@ -177,11 +175,11 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
           setDbConnected(true);
         }
 
+        const mappedConfigs: any = {};
         if (configData) {
-          const mappedConfigs = configData.reduce((acc: any, curr: any) => {
-            acc[curr.key] = curr.value;
-            return acc;
-          }, {});
+          configData.forEach((curr: any) => {
+            mappedConfigs[curr.key] = curr.value;
+          });
 
           if (mappedConfigs.user_info) setUserInfo(mappedConfigs.user_info);
           if (mappedConfigs.reasons_data) setReasons(mappedConfigs.reasons_data);
@@ -206,192 +204,216 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
         }
 
         // B1. Load Projects (resolving snake_case fields / camelCase compatibility)
-        const { data: rawProjects, error: projectsError } = await supabase
-          .from('projects')
-          .select('*')
-          .order('created_at', { ascending: true });
+        let loadedProjects: Project[] = [];
+        try {
+          const { data: rawProjects, error: projectsError } = await supabase
+            .from('projects')
+            .select('*')
+            .order('created_at', { ascending: true });
 
-        if (!projectsError && rawProjects) {
-          const convertedProjects: Project[] = rawProjects.map((p: any) => {
-            // Unpack technologies TEXT[] safely
-            let techArray: string[] = [];
-            if (Array.isArray(p.technologies)) {
-              techArray = p.technologies;
-            } else if (p.technologies) {
-              try {
-                const parsed = JSON.parse(p.technologies);
-                techArray = Array.isArray(parsed) ? parsed : [p.technologies];
-              } catch {
-                techArray = [p.technologies];
-              }
-            }
-            techArray = techArray.map(t => String(t).trim()).filter(Boolean);
-
-            // Handle optional case study extended text fields or nested json
-            let caseStudy = undefined;
-            if (p.challenge || p.solution || p.impact) {
-              caseStudy = {
-                challenge: p.challenge || '',
-                solution: p.solution || '',
-                impact: p.impact || ''
-              };
-            } else if (p.extendedDetails) {
-              try {
-                const details = typeof p.extendedDetails === 'string' ? JSON.parse(p.extendedDetails) : p.extendedDetails;
-                if (details) {
-                  caseStudy = {
-                    challenge: details.challenge || '',
-                    solution: details.solution || '',
-                    impact: details.impact || ''
-                  };
-                }
-              } catch {
-                // Return empty
-              }
-            }
-
-            return {
-              id: p.id,
-              title: p.title || '',
-              description: p.description || '',
-              category: p.category || 'Web Development',
-              imageUrl: p.image_url || p.imageUrl || '',
-              technologies: techArray,
-              liveUrl: p.live_url || p.liveUrl || undefined,
-              githubUrl: p.github_url || p.githubUrl || undefined,
-              extendedDetails: caseStudy
-            };
-          });
-          setProjects(convertedProjects);
-        } else if (projectsError) {
-          console.error('Projects list fetch suffered custom error:', projectsError.message);
-        }
-
-        // B2. Load Services 
-        const { data: rawServices, error: servicesError } = await supabase
-          .from('services')
-          .select('*')
-          .order('created_at', { ascending: true });
-
-        if (!servicesError && rawServices) {
-          const convertedServices: Service[] = rawServices.map((s: any) => {
-            let bulletsArray: string[] = [];
-            if (Array.isArray(s.bullets)) {
-              bulletsArray = s.bullets;
-            } else if (s.bullets) {
-              try {
-                const parsed = JSON.parse(s.bullets);
-                bulletsArray = Array.isArray(parsed) ? parsed : [s.bullets];
-              } catch {
-                bulletsArray = [s.bullets];
-              }
-            }
-            bulletsArray = bulletsArray.map(b => String(b).trim()).filter(Boolean);
-
-            return {
-              id: s.id,
-              title: s.title || '',
-              description: s.description || '',
-              bullets: bulletsArray,
-              iconName: s.icon_name || s.iconName || 'Code',
-              category: s.category || 'core'
-            };
-          });
-          setServices(convertedServices);
-        } else if (servicesError) {
-          console.error('Services configurations fetch suffered custom error:', servicesError.message);
-        }
-
-        // B3. Load Timeline Events (with dynamic mapping corresponding to tables)
-        let timelineRes = await supabase.from('timeline_events').select('*');
-        let isTimelineEventsTable = true;
-        if (timelineRes.error) {
-          timelineRes = await supabase.from('timeline').select('*');
-          isTimelineEventsTable = false;
-        }
-
-        if (!timelineRes.error && timelineRes.data) {
-          // Sort items locally to preserve chronological order
-          const sortedTimeline = [...timelineRes.data].sort((a: any, b: any) => {
-            const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-            const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-            return dateA - dateB;
-          });
-
-          const convertedTimeline: TimelineEvent[] = sortedTimeline.map((t: any) => {
-            let descArray: string[] = [];
-            if (isTimelineEventsTable) {
-              // Parse serialized string descriptions inside timeline_events table
-              try {
-                const parsed = JSON.parse(t.description);
-                descArray = Array.isArray(parsed) ? parsed : [t.description];
-              } catch {
-                descArray = t.description ? t.description.split('\n').map((s: string) => s.trim()).filter(Boolean) : [];
-              }
-
-              // Parse list of skills
-              let skillsArray: string[] = [];
-              if (Array.isArray(t.skills)) {
-                skillsArray = t.skills;
-              } else if (t.skills) {
+          if (!projectsError && rawProjects && rawProjects.length > 0) {
+            loadedProjects = rawProjects.map((p: any) => {
+              // Unpack technologies TEXT[] safely
+              let techArray: string[] = [];
+              if (Array.isArray(p.technologies)) {
+                techArray = p.technologies;
+              } else if (p.technologies) {
                 try {
-                  const parsed = JSON.parse(t.skills);
-                  skillsArray = Array.isArray(parsed) ? parsed : [];
+                  const parsed = JSON.parse(p.technologies);
+                  techArray = Array.isArray(parsed) ? parsed : [p.technologies];
                 } catch {
-                  // Fallback
+                  techArray = [p.technologies];
+                }
+              }
+              techArray = techArray.map(t => String(t).trim()).filter(Boolean);
+
+              // Handle optional case study extended text fields or nested json
+              let caseStudy = undefined;
+              if (p.challenge || p.solution || p.impact) {
+                caseStudy = {
+                  challenge: p.challenge || '',
+                  solution: p.solution || '',
+                  impact: p.impact || ''
+                };
+              } else if (p.extendedDetails) {
+                try {
+                  const details = typeof p.extendedDetails === 'string' ? JSON.parse(p.extendedDetails) : p.extendedDetails;
+                  if (details) {
+                    caseStudy = {
+                      challenge: details.challenge || '',
+                      solution: details.solution || '',
+                      impact: details.impact || ''
+                    };
+                  }
+                } catch {
+                  // Return empty
                 }
               }
 
               return {
-                id: t.id,
-                role: t.title || '',
-                company: t.company || '',
-                location: t.location || 'Local / Pakistan',
-                duration: t.year || '',
-                description: descArray.filter(Boolean),
-                skills: skillsArray.filter(Boolean),
-                category: t.category || 'professional'
+                id: p.id,
+                title: p.title || '',
+                description: p.description || '',
+                category: p.category || 'Web Development',
+                imageUrl: p.image_url || p.imageUrl || '',
+                technologies: techArray,
+                liveUrl: p.live_url || p.liveUrl || undefined,
+                githubUrl: p.github_url || p.githubUrl || undefined,
+                extendedDetails: caseStudy
               };
-            } else {
-              // Direct timeline mapping
-              if (Array.isArray(t.description)) {
-                descArray = t.description;
-              } else if (t.description) {
+            });
+          }
+        } catch (err) {
+          console.error("Dedicated projects load exception:", err);
+        }
+
+        if (loadedProjects.length > 0) {
+          setProjects(loadedProjects);
+        } else if (mappedConfigs.projects_data) {
+          setProjects(mappedConfigs.projects_data);
+        }
+
+        // B2. Load Services 
+        let loadedServices: Service[] = [];
+        try {
+          const { data: rawServices, error: servicesError } = await supabase
+            .from('services')
+            .select('*')
+            .order('created_at', { ascending: true });
+
+          if (!servicesError && rawServices && rawServices.length > 0) {
+            loadedServices = rawServices.map((s: any) => {
+              let bulletsArray: string[] = [];
+              if (Array.isArray(s.bullets)) {
+                bulletsArray = s.bullets;
+              } else if (s.bullets) {
+                try {
+                  const parsed = JSON.parse(s.bullets);
+                  bulletsArray = Array.isArray(parsed) ? parsed : [s.bullets];
+                } catch {
+                  bulletsArray = [s.bullets];
+                }
+              }
+              bulletsArray = bulletsArray.map(b => String(b).trim()).filter(Boolean);
+
+              return {
+                id: s.id,
+                title: s.title || '',
+                description: s.description || '',
+                bullets: bulletsArray,
+                iconName: s.icon_name || s.iconName || 'Code',
+                category: s.category || 'core'
+              };
+            });
+          }
+        } catch (err) {
+          console.error("Dedicated services load exception:", err);
+        }
+
+        if (loadedServices.length > 0) {
+          setServices(loadedServices);
+        } else if (mappedConfigs.services_data) {
+          setServices(mappedConfigs.services_data);
+        }
+
+        // B3. Load Timeline Events (with dynamic mapping corresponding to tables)
+        let loadedTimeline: TimelineEvent[] = [];
+        try {
+          let timelineRes = await supabase.from('timeline_events').select('*');
+          let isTimelineEventsTable = true;
+          if (timelineRes.error) {
+            timelineRes = await supabase.from('timeline').select('*');
+            isTimelineEventsTable = false;
+          }
+
+          if (!timelineRes.error && timelineRes.data && timelineRes.data.length > 0) {
+            // Sort items locally to preserve chronological order
+            const sortedTimeline = [...timelineRes.data].sort((a: any, b: any) => {
+              const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+              const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+              return dateA - dateB;
+            });
+
+            loadedTimeline = sortedTimeline.map((t: any) => {
+              let descArray: string[] = [];
+              if (isTimelineEventsTable) {
+                // Parse serialized string descriptions inside timeline_events table
                 try {
                   const parsed = JSON.parse(t.description);
                   descArray = Array.isArray(parsed) ? parsed : [t.description];
                 } catch {
-                  descArray = [t.description];
+                  descArray = t.description ? t.description.split('\n').map((s: string) => s.trim()).filter(Boolean) : [];
                 }
-              }
 
-              let skillsArray: string[] = [];
-              if (Array.isArray(t.skills)) {
-                skillsArray = t.skills;
-              } else if (t.skills) {
-                try {
-                  const parsed = JSON.parse(t.skills);
-                  skillsArray = Array.isArray(parsed) ? parsed : [];
+                // Parse list of skills
+                let skillsArray: string[] = [];
+                if (Array.isArray(t.skills)) {
+                  skillsArray = t.skills;
+                } else if (t.skills) {
+                  try {
+                    const parsed = JSON.parse(t.skills);
+                    skillsArray = Array.isArray(parsed) ? parsed : [];
+                  } catch {
+                    // Fallback
+                  }
+                }
+
+                return {
+                  id: t.id,
+                  role: t.title || '',
+                  company: t.company || '',
+                  location: t.location || 'Local / Pakistan',
+                  duration: t.year || '',
+                  description: descArray.filter(Boolean),
+                  skills: skillsArray.filter(Boolean),
+                  category: t.category || 'professional'
+                };
+              } else {
+                // Direct timeline mapping
+                if (Array.isArray(t.description)) {
+                  descArray = t.description;
+                } else if (t.description) {
+                  try {
+                    const parsed = JSON.parse(t.description);
+                    descArray = Array.isArray(parsed) ? parsed : [t.description];
                 } catch {
-                  // Fallback
+                    descArray = [t.description];
+                  }
                 }
-              }
 
-              return {
-                id: t.id,
-                role: t.role || '',
-                company: t.company || '',
-                location: t.location || 'Local / Pakistan',
-                duration: t.duration || '',
-                description: descArray.filter(Boolean),
-                skills: skillsArray.filter(Boolean),
-                category: t.category || 'professional'
-              };
-            }
-          });
-          setTimeline(convertedTimeline);
-        } else if (timelineRes.error) {
-          console.error('Timeline events fetch suffered custom error:', timelineRes.error.message);
+                let skillsArray: string[] = [];
+                if (Array.isArray(t.skills)) {
+                  skillsArray = t.skills;
+                } else if (t.skills) {
+                  try {
+                    const parsed = JSON.parse(t.skills);
+                    skillsArray = Array.isArray(parsed) ? parsed : [];
+                  } catch {
+                    // Fallback
+                  }
+                }
+
+                return {
+                  id: t.id,
+                  role: t.role || '',
+                  company: t.company || '',
+                  location: t.location || 'Local / Pakistan',
+                  duration: t.duration || '',
+                  description: descArray.filter(Boolean),
+                  skills: skillsArray.filter(Boolean),
+                  category: t.category || 'professional'
+                };
+              }
+            });
+          }
+        } catch (err) {
+          console.error("Dedicated timeline load exception:", err);
+        }
+
+        if (loadedTimeline.length > 0) {
+          setTimeline(loadedTimeline);
+        } else if (mappedConfigs.timeline_data) {
+          setTimeline(mappedConfigs.timeline_data);
         }
 
       } catch (err) {
@@ -445,73 +467,83 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
     setProjects(newProjects);
     if (!supabase) return true;
     try {
-      // Direct replace transaction mapping
-      const { error: deletionError } = await supabase
-        .from('projects')
-        .delete()
-        .neq('id', 'placeholder-uuid-unmatched');
-
-      if (deletionError) {
-        console.error('Projects delete query failed:', deletionError.message);
-        return false;
-      }
-
-      if (newProjects.length === 0) return true;
-
-      // Map to correct standard snake_case schema columns
-      const itemsToInsert = newProjects.map((p, idx) => {
-        // Sanitize technologies text array formatting
-        const cleanTech = Array.isArray(p.technologies)
-          ? p.technologies.map(t => String(t).trim()).filter(Boolean)
-          : [];
-
-        return {
-          id: p.id,
-          title: p.title || '',
-          description: p.description || '',
-          category: p.category || 'Web Development',
-          image_url: p.imageUrl || '',
-          technologies: cleanTech,
-          live_url: p.liveUrl || null,
-          github_url: p.githubUrl || null,
-          challenge: p.extendedDetails?.challenge || '',
-          solution: p.extendedDetails?.solution || '',
-          impact: p.extendedDetails?.impact || '',
-          created_at: new Date(Date.now() + idx * 1000).toISOString()
-        };
-      });
-
-      const { error: insertError } = await supabase
-        .from('projects')
-        .insert(itemsToInsert);
-
-      if (insertError) {
-        console.warn('Projects standard snake_case write failed, trying camelCase fallback... Error:', insertError.message);
-
-        const fallbackItems = newProjects.map((p, idx) => ({
-          id: p.id,
-          title: p.title || '',
-          description: p.description || '',
-          category: p.category || 'Web Development',
-          imageUrl: p.imageUrl || '',
-          technologies: Array.isArray(p.technologies) ? p.technologies.filter(Boolean) : [],
-          liveUrl: p.liveUrl || null,
-          githubUrl: p.githubUrl || null,
-          extendedDetails: p.extendedDetails || null,
-          created_at: new Date(Date.now() + idx * 1000).toISOString()
-        }));
-
-        const { error: fallbackError } = await supabase
+      let tableSuccess = false;
+      try {
+        // Direct replace transaction mapping
+        const { error: deletionError } = await supabase
           .from('projects')
-          .insert(fallbackItems);
+          .delete()
+          .neq('id', 'placeholder-uuid-unmatched');
 
-        if (fallbackError) {
-          console.error('Both standard and fallback project saves failed:', fallbackError.message);
-          return false;
+        if (!deletionError) {
+          if (newProjects.length === 0) {
+            tableSuccess = true;
+          } else {
+            // Map to correct standard snake_case schema columns
+            const itemsToInsert = newProjects.map((p, idx) => {
+              const cleanTech = Array.isArray(p.technologies)
+                ? p.technologies.map(t => String(t).trim()).filter(Boolean)
+                : [];
+
+              return {
+                id: p.id,
+                title: p.title || '',
+                description: p.description || '',
+                category: p.category || 'Web Development',
+                image_url: p.imageUrl || '',
+                technologies: cleanTech,
+                live_url: p.liveUrl || null,
+                github_url: p.githubUrl || null,
+                challenge: p.extendedDetails?.challenge || '',
+                solution: p.extendedDetails?.solution || '',
+                impact: p.extendedDetails?.impact || '',
+                created_at: new Date(Date.now() + idx * 1000).toISOString()
+              };
+            });
+
+            const { error: insertError } = await supabase
+              .from('projects')
+              .insert(itemsToInsert);
+
+            if (!insertError) {
+              tableSuccess = true;
+            } else {
+              console.warn('Projects standard snake_case write failed, trying camelCase fallback... Error:', insertError.message);
+
+              const fallbackItems = newProjects.map((p, idx) => ({
+                id: p.id,
+                title: p.title || '',
+                description: p.description || '',
+                category: p.category || 'Web Development',
+                imageUrl: p.imageUrl || '',
+                technologies: Array.isArray(p.technologies) ? p.technologies.filter(Boolean) : [],
+                liveUrl: p.liveUrl || null,
+                githubUrl: p.githubUrl || null,
+                extendedDetails: p.extendedDetails || null,
+                created_at: new Date(Date.now() + idx * 1000).toISOString()
+              }));
+
+              const { error: fallbackError } = await supabase
+                .from('projects')
+                .insert(fallbackItems);
+
+              if (!fallbackError) {
+                tableSuccess = true;
+              } else {
+                console.error('Both standard and fallback project saves failed:', fallbackError.message);
+              }
+            }
+          }
+        } else {
+          console.error('Projects deletion failed:', deletionError.message);
         }
+      } catch (err) {
+        console.error('Dedicated projects table write exception:', err);
       }
 
-      return true;
+      // Constantly write map state as transparent configurations backup key
+      const configSuccess = await upsertConfigHelper('projects_data', newProjects);
+      return tableSuccess || configSuccess;
     } catch (err) {
       console.error('Critical project transaction exception:', err);
       return false;
@@ -522,63 +554,73 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
     setServices(newServices);
     if (!supabase) return true;
     try {
-      const { error: deletionError } = await supabase
-        .from('services')
-        .delete()
-        .neq('id', 'placeholder-uuid-unmatched');
-
-      if (deletionError) {
-        console.error('Services delete query clean up step failed:', deletionError.message);
-        return false;
-      }
-
-      if (newServices.length === 0) return true;
-
-      // Sanitize bullets TEXT[] formatting
-      const itemsToInsert = newServices.map((s, idx) => {
-        const cleanBullets = Array.isArray(s.bullets)
-          ? s.bullets.map(b => String(b).trim()).filter(Boolean)
-          : [];
-
-        return {
-          id: s.id,
-          title: s.title || '',
-          description: s.description || '',
-          bullets: cleanBullets,
-          icon_name: s.iconName || 'Code',
-          category: s.category || 'core',
-          created_at: new Date(Date.now() + idx * 1000).toISOString()
-        };
-      });
-
-      const { error: insertError } = await supabase
-        .from('services')
-        .insert(itemsToInsert);
-
-      if (insertError) {
-        console.warn('Services standard snake_case write failed, trying camelCase fallback... Error:', insertError.message);
-
-        const fallbackItems = newServices.map((s, idx) => ({
-          id: s.id,
-          title: s.title || '',
-          description: s.description || '',
-          bullets: Array.isArray(s.bullets) ? s.bullets.filter(Boolean) : [],
-          iconName: s.iconName || 'Code',
-          category: s.category || 'core',
-          created_at: new Date(Date.now() + idx * 1000).toISOString()
-        }));
-
-        const { error: fallbackError } = await supabase
+      let tableSuccess = false;
+      try {
+        const { error: deletionError } = await supabase
           .from('services')
-          .insert(fallbackItems);
+          .delete()
+          .neq('id', 'placeholder-uuid-unmatched');
 
-        if (fallbackError) {
-          console.error('Both standard and fallback service saves failed:', fallbackError.message);
-          return false;
+        if (!deletionError) {
+          if (newServices.length === 0) {
+            tableSuccess = true;
+          } else {
+            // Sanitize bullets TEXT[] formatting
+            const itemsToInsert = newServices.map((s, idx) => {
+              const cleanBullets = Array.isArray(s.bullets)
+                ? s.bullets.map(b => String(b).trim()).filter(Boolean)
+                : [];
+
+              return {
+                id: s.id,
+                title: s.title || '',
+                description: s.description || '',
+                bullets: cleanBullets,
+                icon_name: s.iconName || 'Code',
+                category: s.category || 'core',
+                created_at: new Date(Date.now() + idx * 1000).toISOString()
+              };
+            });
+
+            const { error: insertError } = await supabase
+              .from('services')
+              .insert(itemsToInsert);
+
+            if (!insertError) {
+              tableSuccess = true;
+            } else {
+              console.warn('Services standard snake_case write failed, trying camelCase fallback... Error:', insertError.message);
+
+              const fallbackItems = newServices.map((s, idx) => ({
+                id: s.id,
+                title: s.title || '',
+                description: s.description || '',
+                bullets: Array.isArray(s.bullets) ? s.bullets.filter(Boolean) : [],
+                iconName: s.iconName || 'Code',
+                category: s.category || 'core',
+                created_at: new Date(Date.now() + idx * 1000).toISOString()
+              }));
+
+              const { error: fallbackError } = await supabase
+                .from('services')
+                .insert(fallbackItems);
+
+              if (!fallbackError) {
+                tableSuccess = true;
+              } else {
+                console.error('Both standard and fallback service saves failed:', fallbackError.message);
+              }
+            }
+          }
+        } else {
+          console.error('Services deletion failed:', deletionError.message);
         }
+      } catch (err) {
+        console.error('Dedicated services table write exception:', err);
       }
 
-      return true;
+      const configSuccess = await upsertConfigHelper('services_data', newServices);
+      return tableSuccess || configSuccess;
     } catch (err) {
       console.error('Critical service transaction exception:', err);
       return false;
@@ -589,68 +631,85 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
     setTimeline(newTimeline);
     if (!supabase) return true;
     try {
-      // 1. Try 'timeline_events' first (Mapped with schema properties)
-      const { error: deletionEventsError } = await supabase
-        .from('timeline_events')
-        .delete()
-        .neq('id', 'placeholder-uuid-unmatched');
-
-      let timelineEventsFormatted = newTimeline.map((t, idx) => ({
-        id: t.id,
-        year: t.duration || '',
-        title: t.role || '',
-        company: t.company || '',
-        description: Array.isArray(t.description) ? JSON.stringify(t.description) : (t.description || ''),
-        category: t.category || 'professional',
-        created_at: new Date(Date.now() + idx * 1000).toISOString()
-      }));
-
-      if (!deletionEventsError) {
-        if (newTimeline.length === 0) return true;
-
-        const { error: insertEventsError } = await supabase
+      let tableSuccess = false;
+      try {
+        // 1. Try 'timeline_events' first (Mapped with schema properties)
+        const { error: deletionEventsError } = await supabase
           .from('timeline_events')
-          .insert(timelineEventsFormatted);
+          .delete()
+          .neq('id', 'placeholder-uuid-unmatched');
 
-        if (!insertEventsError) return true;
-        console.warn('Failed timeline_events writing, falling back to timeline table:', insertEventsError.message);
+        if (!deletionEventsError) {
+          if (newTimeline.length === 0) {
+            tableSuccess = true;
+          } else {
+            let timelineEventsFormatted = newTimeline.map((t, idx) => ({
+              id: t.id,
+              year: t.duration || '',
+              title: t.role || '',
+              company: t.company || '',
+              description: Array.isArray(t.description) ? JSON.stringify(t.description) : (t.description || ''),
+              category: t.category || 'professional',
+              created_at: new Date(Date.now() + idx * 1000).toISOString()
+            }));
+
+            const { error: insertEventsError } = await supabase
+              .from('timeline_events')
+              .insert(timelineEventsFormatted);
+
+            if (!insertEventsError) {
+              tableSuccess = true;
+            } else {
+              console.warn('Failed timeline_events writing, trying backup table options:', insertEventsError.message);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('timeline_events table write exception:', err);
       }
 
-      // 2. Fallback table layout: 'timeline'
-      const { error: deletionTimelineError } = await supabase
-        .from('timeline')
-        .delete()
-        .neq('id', 'placeholder-uuid-unmatched');
+      if (!tableSuccess) {
+        try {
+          // 2. Fallback table layout: 'timeline'
+          const { error: deletionTimelineError } = await supabase
+            .from('timeline')
+            .delete()
+            .neq('id', 'placeholder-uuid-unmatched');
 
-      if (deletionTimelineError) {
-        console.error('Core and custom fallback timeline tables both failed deletions operations:', deletionTimelineError.message);
-        return false;
+          if (!deletionTimelineError) {
+            if (newTimeline.length === 0) {
+              tableSuccess = true;
+            } else {
+              const itemsToInsertTimeline = newTimeline.map((t, idx) => ({
+                id: t.id,
+                role: t.role || '',
+                company: t.company || '',
+                location: t.location || '',
+                duration: t.duration || '',
+                description: Array.isArray(t.description) ? t.description.map(x => String(x).trim()).filter(Boolean) : [],
+                skills: Array.isArray(t.skills) ? t.skills.map(x => String(x).trim()).filter(Boolean) : [],
+                category: t.category || 'professional',
+                created_at: new Date(Date.now() + idx * 1000).toISOString()
+              }));
+
+              const { error: insertTimelineError } = await supabase
+                .from('timeline')
+                .insert(itemsToInsertTimeline);
+
+              if (!insertTimelineError) {
+                tableSuccess = true;
+              } else {
+                console.error('Timeline table fallback insert failed:', insertTimelineError.message);
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Dedicated timeline table write exception:', err);
+        }
       }
 
-      if (newTimeline.length === 0) return true;
-
-      const itemsToInsertTimeline = newTimeline.map((t, idx) => ({
-        id: t.id,
-        role: t.role || '',
-        company: t.company || '',
-        location: t.location || '',
-        duration: t.duration || '',
-        description: Array.isArray(t.description) ? t.description.map(x => String(x).trim()).filter(Boolean) : [],
-        skills: Array.isArray(t.skills) ? t.skills.map(x => String(x).trim()).filter(Boolean) : [],
-        category: t.category || 'professional',
-        created_at: new Date(Date.now() + idx * 1000).toISOString()
-      }));
-
-      const { error: insertTimelineError } = await supabase
-        .from('timeline')
-        .insert(itemsToInsertTimeline);
-
-      if (insertTimelineError) {
-        console.error('Timeline fallback index insert query failed:', insertTimelineError.message);
-        return false;
-      }
-
-      return true;
+      const configSuccess = await upsertConfigHelper('timeline_data', newTimeline);
+      return tableSuccess || configSuccess;
     } catch (err) {
       console.error('Critical timeline transaction exception:', err);
       return false;
@@ -682,7 +741,8 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       const okServ = await saveServices(SERVICES_DATA);
       const okTime = await saveTimeline(TIMELINE_DATA);
 
-      const allSuccess = okConf1 && okConf2 && okConf3 && okConf4 && okConf5 && okProj && okServ && okTime;
+      // Seed is successful as long as we seeded the core configuration tables successfully
+      const configsOk = okConf1 && okConf2 && okConf3 && okConf4 && okConf5;
       
       // Update local state for real-time reactivity
       setUserInfo(USER_INFO);
@@ -695,7 +755,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       setSeoSettings(seoData);
 
       setDbConnected(true);
-      return allSuccess;
+      return configsOk;
     } catch (err) {
       console.error('Failed to seed Supabase database completely:', err);
       return false;
