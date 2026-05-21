@@ -22,31 +22,24 @@ function MainApp() {
       // 1. Migrating legacy Hash links to clean Pathname links transparently
       if (window.location.hash) {
         const hash = window.location.hash.replace('#/', '').replace('#', '');
-        const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'contact', 'ur-control-panel-x9a7'];
-        if (hash) {
-          const targetPage = hash === 'admin-hub-ur' ? 'ur-control-panel-x9a7' : hash;
-          if (validPages.includes(targetPage)) {
-            const cleanPath = targetPage === 'home' ? '/' : `/${targetPage}`;
-            window.history.replaceState(null, '', cleanPath);
-            setActivePage(targetPage);
-            return;
-          }
+        const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'contact', 'admin-hub-ur', 'ur-control-panel-x9a7'];
+        if (hash && validPages.includes(hash)) {
+          const cleanPath = hash === 'home' ? '/' : `/${hash}`;
+          window.history.replaceState(null, '', cleanPath);
+          setActivePage(hash);
+          return;
         }
       }
 
       // 2. Standard path-based routing
       const pathname = window.location.pathname;
       const route = pathname.replace(/^\/+/, '').replace(/\/+$/, '');
-      const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'contact', 'ur-control-panel-x9a7'];
+      const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'contact', 'admin-hub-ur', 'ur-control-panel-x9a7'];
       
       if (!route) {
         setActivePage('home');
       } else if (validPages.includes(route)) {
         setActivePage(route);
-      } else if (route === 'admin-hub-ur') {
-        // legacy admin panel fallback path redirection
-        setActivePage('ur-control-panel-x9a7');
-        window.history.replaceState(null, '', '/ur-control-panel-x9a7');
       } else {
         setActivePage('home');
         window.history.replaceState(null, '', '/');
@@ -64,7 +57,8 @@ function MainApp() {
   // Prevent Search Engine Crawlers & Indexers from indexing the private panels
   useEffect(() => {
     let robotsMeta = document.querySelector('meta[name="robots"]');
-    if (activePage === 'ur-control-panel-x9a7') {
+    const isPrivate = activePage === 'admin-hub-ur' || activePage === 'ur-control-panel-x9a7';
+    if (isPrivate) {
       if (!robotsMeta) {
         robotsMeta = document.createElement('meta');
         robotsMeta.setAttribute('name', 'robots');
@@ -97,6 +91,7 @@ function MainApp() {
         return <ExperienceView />;
       case 'contact':
         return <ContactView />;
+      case 'admin-hub-ur':
       case 'ur-control-panel-x9a7':
         return <AdminHubView />;
       case 'home':
@@ -106,7 +101,7 @@ function MainApp() {
   };
 
   const isLight = theme === 'light';
-  const showChrome = activePage !== 'ur-control-panel-x9a7';
+  const showChrome = activePage !== 'admin-hub-ur' && activePage !== 'ur-control-panel-x9a7';
 
   return (
     <div className={`min-h-screen transition-colors duration-500 flex flex-col justify-between relative ${
