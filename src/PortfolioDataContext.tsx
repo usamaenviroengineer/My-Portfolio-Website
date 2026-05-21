@@ -99,14 +99,23 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
   // Post dynamic changes to the backend
   const saveToServer = async (payload: Partial<any>) => {
     try {
+      console.log("[CMS Engine] Saving updates to backend...", payload);
       const res = await fetch('/api/portfolio-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      return res.ok;
+      
+      if (!res.ok) {
+        console.error(`[CMS Engine] Server responded with error status: ${res.status} ${res.statusText}`);
+        return false;
+      }
+      
+      const responseData = await res.json();
+      console.log("[CMS Engine] Dynamic synchronization response:", responseData);
+      return responseData.success === true;
     } catch (err) {
-      console.error('Failed to save changes to backend API', err);
+      console.error('[CMS Engine] Failed to dispatch changes to the backend API:', err);
       return false;
     }
   };
