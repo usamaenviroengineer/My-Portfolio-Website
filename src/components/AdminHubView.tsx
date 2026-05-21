@@ -6,7 +6,7 @@ import {
   Plus, Edit2, Trash2, Check, X, Shield, RefreshCw, Mail, 
   Layers, ChevronRight, Save, LayoutGrid, Calendar, LogOut, 
   Sliders, MessageSquare, AlertCircle, Trash, Globe, MapPin, 
-  ExternalLink, Code, User
+  ExternalLink, Code, User, Copy
 } from 'lucide-react';
 import { Project, Service, TimelineEvent, SkillGroup } from '../types';
 
@@ -60,9 +60,9 @@ export default function AdminHubView() {
       } else {
         setAuthError(data.error || "The passcode entered is incorrect.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Login verification network failure:", err);
-      setAuthError("Network error occurred connecting to server. Please retry.");
+      setAuthError(`Network error: ${err?.message || String(err)}. Please try again.`);
     } finally {
       setIsAuthorizing(false);
     }
@@ -102,6 +102,71 @@ export default function AdminHubView() {
   const showStatus = (msg: string, isOk = true) => {
     setSaveStatus({ success: isOk, message: msg });
     setTimeout(() => setSaveStatus(null), 5000);
+  };
+
+  // --- DATABASE DIAGNOSTICS & SYNC STATUS ---
+  interface DbStatus {
+    configured: boolean;
+    supabaseUrl: string | null;
+    configsTableOk: boolean;
+    messagesTableOk: boolean;
+    errors: string[];
+  }
+  const [dbStatus, setDbStatus] = useState<DbStatus | null>(null);
+  const [loadingDbStatus, setLoadingDbStatus] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
+
+  const fetchDbStatus = async () => {
+    setLoadingDbStatus(true);
+    try {
+      const res = await fetch('/api/db-status');
+      if (res.ok) {
+        const data = await res.json();
+        setDbStatus(data);
+      }
+    } catch (err) {
+      console.error("Failed fetching database diagnostics status:", err);
+    } finally {
+      setLoadingDbStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthorized) {
+      fetchDbStatus();
+    }
+  }, [isAuthorized]);
+
+  const copySqlSchema = () => {
+    const sql = `-- A. Table: portfolio_configs
+CREATE TABLE IF NOT EXISTS portfolio_configs (
+    key VARCHAR(255) PRIMARY KEY,
+    value JSONB NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE portfolio_configs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public select" ON portfolio_configs FOR SELECT USING (true);
+CREATE POLICY "Allow admin writes" ON portfolio_configs FOR ALL USING (true);
+
+-- B. Table: contact_messages
+CREATE TABLE IF NOT EXISTS contact_messages (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    subject VARCHAR(255),
+    message TEXT NOT NULL,
+    timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    ip_address VARCHAR(100),
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow anonymous inserts" ON contact_messages FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow admin operations" ON contact_messages FOR ALL USING (true);`;
+    
+    navigator.clipboard.writeText(sql);
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 3000);
   };
 
   // --- PROJECT MANAGEMENT ---
@@ -503,6 +568,92 @@ export default function AdminHubView() {
                 </button>
               );
             })}
+
+            {/* Database Cloud Sync Health Station */}
+            <div className={`mt-4 p-5 rounded-2xl border text-left flex flex-col gap-3.5 relative overflow-hidden ${
+              isLight ? 'bg-white border-zinc-200 shadow-xs' : 'bg-[#121212]/30 border-white/5'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[9px] uppercase tracking-widest text-[#00C853] font-black">Supabase Sync Status</span>
+                <button 
+                  onClick={fetchDbStatus} 
+                  disabled={loadingDbStatus}
+                  className="font-mono text-[9px] text-[#00C853] hover:underline disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                >
+                  <RefreshCw className={`w-2.5 h-2.5 ${loadingDbStatus ? 'animate-spin' : ''}`} /> Refresh
+                </button>
+              </div>
+
+              {loadingDbStatus ? (
+                <div className="space-y-1.5 animate-pulse">
+                  <div className="h-3 bg-zinc-500/20 rounded w-2/3" />
+                  <div className="h-2.5 bg-zinc-500/20 rounded w-1/2" />
+                </div>
+              ) : dbStatus ? (
+                <div className="space-y-3">
+                  {/* Row 1: Configurations Table */}
+                  <div className="flex items-center justify-between text-[11px] font-mono">
+                    <span className="text-zinc-500">Configs Table:</span>
+                    {dbStatus.configsTableOk ? (
+                      <span className="text-[#00C853] bg-[#00C853]/10 px-1.5 py-0.5 rounded-md flex items-center gap-1 font-bold">
+                        <Check className="w-2.5 h-2.5" /> OK
+                      </span>
+                    ) : (
+                      <span className="text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md font-bold text-[10px]">
+                        Offline Fallback
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Row 2: Messages Table */}
+                  <div className="flex items-center justify-between text-[11px] font-mono">
+                    <span className="text-zinc-500">Messages Table:</span>
+                    {dbStatus.messagesTableOk ? (
+                      <span className="text-[#00C853] bg-[#00C853]/10 px-1.5 py-0.5 rounded-md flex items-center gap-1 font-bold">
+                        <Check className="w-2.5 h-2.5" /> OK
+                      </span>
+                    ) : (
+                      <span className="text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md font-bold text-[10px]">
+                        Offline Fallback
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Warning advice block if tables do not exist */}
+                  {(!dbStatus.configsTableOk || !dbStatus.messagesTableOk) && (
+                    <div className="pt-2.5 border-t border-zinc-500/10 space-y-2">
+                      <p className="text-[10px] text-zinc-400 leading-relaxed font-sans">
+                        ⚠️ <span className="font-bold text-amber-500">PGRST125</span>: Tables are missing on Supabase. Copy & run the table SQL inside your Supabase project console SQL Editor to activate real-time cloud storage:
+                      </p>
+                      <button
+                        onClick={copySqlSchema}
+                        className="w-full py-2 bg-[#00C853]/10 hover:bg-[#00C853]/20 active:scale-[0.98] border border-[#00C853]/35 text-[#00C853] font-mono text-[9px] uppercase font-bold rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        {copiedSql ? (
+                          <>
+                            <Check className="w-3 h-3" /> SQL copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-2.5 h-2.5" /> Copy SQL Setup code
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {dbStatus.configsTableOk && dbStatus.messagesTableOk && (
+                    <div className="pt-1.5 text-[9px] text-[#00C853] font-mono flex items-center gap-1.5 bg-[#00C853]/5 p-2 rounded-xl">
+                      <Shield className="w-4 h-4 shrink-0 text-[#00C853]" /> Cloud connection validated & synced.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-[11px] text-zinc-500 font-mono">
+                  Diagnostics not loaded.
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Dynamic configuration dashboard panel split */}

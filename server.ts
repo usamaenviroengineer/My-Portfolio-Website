@@ -108,8 +108,11 @@ app.get('/api/portfolio-data', async (req, res) => {
         } else {
           console.error("[Supabase] Error seeding configurations:", seedError);
         }
+      } else if (error && error.code === 'PGRST125') {
+        // Table does not exist yet
+        console.log("[Supabase Store] Note: 'portfolio_configs' table is not created yet (PGRST125). Using local db.json file storage gracefully.");
       } else {
-        console.warn("[Supabase] Select query failed. Falling back to local values. Code:", error?.code);
+        console.warn("[Supabase] Select query failed. Falling back to local values. Code:", error?.code, error?.message);
       }
     } catch (dbErr) {
       console.error("[Supabase] Core data channel failure:", dbErr);
@@ -118,6 +121,50 @@ app.get('/api/portfolio-data', async (req, res) => {
 
   // Baseline JSON File sync fallback
   res.json(localDB);
+});
+
+// New database status check endpoint for user diagnostics helper
+app.get('/api/db-status', async (req, res) => {
+  const supabase = getSupabase();
+  const status = {
+    configured: !!supabase,
+    supabaseUrl: process.env.SUPABASE_URL || null,
+    configsTableOk: false,
+    messagesTableOk: false,
+    errors: [] as string[]
+  };
+
+  if (supabase) {
+    try {
+      // 1. Test portfolio_configs table existence
+      const { error: confError } = await supabase
+        .from('portfolio_configs')
+        .select('key')
+        .limit(1);
+      
+      if (!confError) {
+        status.configsTableOk = true;
+      } else {
+        status.errors.push(`configsTable: ${confError.message} (Code: ${confError.code})`);
+      }
+
+      // 2. Test contact_messages table existence
+      const { error: msgError } = await supabase
+        .from('contact_messages')
+        .select('id')
+        .limit(1);
+
+      if (!msgError) {
+        status.messagesTableOk = true;
+      } else {
+        status.errors.push(`messagesTable: ${msgError.message} (Code: ${msgError.code})`);
+      }
+    } catch (err: any) {
+      status.errors.push(`Ping failure: ${err?.message || err}`);
+    }
+  }
+
+  res.json(status);
 });
 
 // 2. POST /api/portfolio-data (Publishes portfolio configurations)
@@ -173,7 +220,11 @@ app.get('/api/contact-messages', async (req, res) => {
         }));
         return res.json(camelCaseMessages);
       } else {
-        console.error("[Supabase] Messages retrieve error:", error);
+        if (error && error.code === 'PGRST125') {
+          console.log("[Supabase Store] Note: 'contact_messages' table is not created yet (PGRST125). Retrieving from local messages.json successfully.");
+        } else {
+          console.error("[Supabase] Messages retrieve error:", error);
+        }
       }
     } catch (dbErr) {
       console.error("[Supabase] Inbox communication failure:", dbErr);
