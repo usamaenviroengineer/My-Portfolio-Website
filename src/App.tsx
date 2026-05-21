@@ -20,7 +20,7 @@ function MainApp() {
   useEffect(() => {
     const parseHash = () => {
       const hash = window.location.hash.replace('#/', '').replace('#', '');
-      const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'contact', 'admin-hub-ur'];
+      const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'contact', 'ur-control-panel-x9a7'];
       if (hash && validPages.includes(hash)) {
         setActivePage(hash);
       } else {
@@ -37,6 +37,23 @@ function MainApp() {
     window.addEventListener('hashchange', parseHash);
     return () => window.removeEventListener('hashchange', parseHash);
   }, []);
+
+  // Prevent Search Engine Crawlers & Indexers from indexing the private panels
+  useEffect(() => {
+    let robotsMeta = document.querySelector('meta[name="robots"]');
+    if (activePage === 'ur-control-panel-x9a7') {
+      if (!robotsMeta) {
+        robotsMeta = document.createElement('meta');
+        robotsMeta.setAttribute('name', 'robots');
+        document.head.appendChild(robotsMeta);
+      }
+      robotsMeta.setAttribute('content', 'noindex, nofollow, noarchive, nosnippet');
+    } else {
+      if (robotsMeta) {
+        robotsMeta.remove();
+      }
+    }
+  }, [activePage]);
 
   const handleNavigate = (pageId: string) => {
     window.location.hash = `#/${pageId}`;
@@ -55,7 +72,7 @@ function MainApp() {
         return <ExperienceView />;
       case 'contact':
         return <ContactView />;
-      case 'admin-hub-ur':
+      case 'ur-control-panel-x9a7':
         return <AdminHubView />;
       case 'home':
       default:
@@ -64,7 +81,7 @@ function MainApp() {
   };
 
   const isLight = theme === 'light';
-  const showChrome = activePage !== 'admin-hub-ur';
+  const showChrome = activePage !== 'ur-control-panel-x9a7';
 
   return (
     <div className={`min-h-screen transition-colors duration-500 flex flex-col justify-between relative ${

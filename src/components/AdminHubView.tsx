@@ -32,41 +32,8 @@ export default function AdminHubView() {
   const isLight = theme === 'light';
 
   // --- ADMINISTRATION SECURE ACCESS ENGINE ---
-  const [isAuthorized, setIsAuthorized] = useState(() => {
-    return sessionStorage.getItem('ur_cms_authorized') === 'true';
-  });
-  const [passcode, setPasscode] = useState('');
-  const [authError, setAuthError] = useState('');
-  const [isAuthorizing, setIsAuthorizing] = useState(false);
-
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!passcode.trim()) return;
-
-    setIsAuthorizing(true);
-    setAuthError('');
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passcode })
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        sessionStorage.setItem('ur_cms_authorized', 'true');
-        setIsAuthorized(true);
-        showStatus("Secure admin shell unlocked successfully!");
-      } else {
-        setAuthError(data.error || "The passcode entered is incorrect.");
-      }
-    } catch (err: any) {
-      console.error("Login verification network failure:", err);
-      setAuthError(`Network error: ${err?.message || String(err)}. Please try again.`);
-    } finally {
-      setIsAuthorizing(false);
-    }
-  };
+  // Route-based direct access engine
+  const isAuthorized = true;
 
   // Active sub-tab
   const [activeTab, setActiveTab] = useState<'projects' | 'services' | 'timeline' | 'skills' | 'profile' | 'inbox'>('projects');
@@ -369,8 +336,6 @@ CREATE POLICY "Allow admin operations" ON contact_messages FOR ALL USING (true);
 
   // Exit/Signout behavior redirects back to standard client environment
   const handleSignOut = () => {
-    sessionStorage.removeItem('ur_cms_authorized');
-    setIsAuthorized(false);
     window.location.hash = '#home';
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
@@ -380,74 +345,6 @@ CREATE POLICY "Allow admin operations" ON contact_messages FOR ALL USING (true);
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
         <RefreshCw className="w-10 h-10 text-[#00C853] animate-spin mb-4" />
         <p className="font-mono text-xs text-[#00C853] uppercase tracking-widest font-bold">Decrypting portfolio properties...</p>
-      </div>
-    );
-  }
-
-  if (!isAuthorized) {
-    return (
-      <div className={`min-h-screen pt-28 pb-20 px-4 sm:px-6 flex items-center justify-center relative ${
-        isLight ? 'bg-[#F6F8FA]' : 'bg-[#0A0A0A]'
-      }`}>
-        <div className="absolute inset-0 bg-[radial-gradient(#00C853_0.5px,transparent_0.5px)] [background-size:24px_24px] opacity-[0.03] pointer-events-none" />
-        
-        <div className={`w-full max-w-md p-8 border rounded-3xl relative z-10 text-left backdrop-blur-md ${
-          isLight ? 'bg-white border-zinc-200' : 'bg-zinc-950/80 border-white/5'
-        }`}>
-          <div className="flex items-center gap-3.5 mb-6">
-            <div className="w-10 h-10 rounded-2xl bg-[#00C853]/10 border border-[#00C853]/30 flex items-center justify-center shadow-[0_0_15px_rgba(0,200,83,0.15)]">
-              <Shield className="w-5 h-5 text-[#00C853]" />
-            </div>
-            <div>
-              <h1 className={`font-display text-sm font-black uppercase tracking-wider ${isLight ? 'text-zinc-900' : 'text-white'}`}>BRANDING CONSOLE CMS</h1>
-              <p className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">Authorized operations gateway</p>
-            </div>
-          </div>
-
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
-            <div>
-              <label className="block font-mono text-[9px] uppercase tracking-widest text-zinc-400 mb-2">Input Secure Verification Passcode</label>
-              <input 
-                type="password" 
-                value={passcode}
-                onChange={e => setPasscode(e.target.value)}
-                placeholder="••••••••••••"
-                className={`w-full p-3 rounded-xl border font-mono text-sm outline-hidden ${
-                  isLight ? 'bg-zinc-50 border-zinc-200 text-black' : 'bg-black/50 border-white/10 text-white focus:border-[#00C853]/50'
-                }`}
-                autoFocus
-              />
-            </div>
-
-            {authError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 text-xs text-red-400 font-mono">
-                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                <span>{authError}</span>
-              </div>
-            )}
-
-            <button 
-              type="submit" 
-              disabled={isAuthorizing || !passcode}
-              className="w-full py-3 bg-[#00C853] hover:bg-[#00E676] active:scale-[0.98] text-black font-semibold font-sans rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {isAuthorizing ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" /> Unlocking Gateway...
-                </>
-              ) : (
-                <>
-                  <Check className="w-4 h-4" /> Authorize Session
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="mt-6 pt-5 border-t border-zinc-500/10 flex items-center justify-between font-mono text-[9px] text-zinc-500 font-bold">
-            <span>SECURE SYSTEM: V2.5</span>
-            <a href="#home" className="hover:text-[#00C853] transition-colors uppercase">← Abort & Safe Go Back</a>
-          </div>
-        </div>
       </div>
     );
   }
