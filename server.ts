@@ -15,10 +15,21 @@ app.use(express.json({ limit: '10mb' }));
 // Normalize incoming request paths for Serverless platform compatibility
 app.use((req, res, next) => {
   const originalUrl = req.url;
+  
+  // Normalize Netlify function prefix to /api
   if (req.url.startsWith('/.netlify/functions/api')) {
     req.url = req.url.replace('/.netlify/functions/api', '/api');
-    console.log(`[Proxy Linker] Normalized path from "${originalUrl}" to "${req.url}"`);
   }
+  
+  // Collapse duplicate slashes to a single slash (e.g., //api -> /api)
+  req.url = req.url.replace(/\/+/g, '/');
+  
+  // Strip trailing slashes unless it is just root (e.g., /api/ -> /api)
+  if (req.url.length > 1 && req.url.endsWith('/')) {
+    req.url = req.url.slice(0, -1);
+  }
+
+  console.log(`[Route Normalizer] Normalized request: "${originalUrl}" -> "${req.url}" (Method: ${req.method})`);
   next();
 });
 
@@ -97,6 +108,27 @@ function getSupabase() {
 }
 
 // --- API ACTIONS & ENDPOINTS ---
+
+// 0. Base health-check and routing diagnostics test endpoints
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: "Backend API is running successfully",
+    info: "Usama Rasheed Portfolio Engine (Root Path)",
+    timestamp: new Date().toISOString(),
+    isServerless: !!(process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT)
+  });
+});
+
+app.get('/api', (req, res) => {
+  res.json({
+    success: true,
+    message: "Backend API is running successfully",
+    info: "Usama Rasheed Portfolio Engine (API Namespace Path)",
+    timestamp: new Date().toISOString(),
+    isServerless: !!(process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT)
+  });
+});
 
 // 1. GET /api/portfolio-data (Pulls merged active configuration)
 app.get('/api/portfolio-data', async (req, res) => {
