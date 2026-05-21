@@ -336,7 +336,8 @@ CREATE POLICY "Allow admin operations" ON contact_messages FOR ALL USING (true);
 
   // Exit/Signout behavior redirects back to standard client environment
   const handleSignOut = () => {
-    window.location.hash = '#home';
+    window.history.pushState(null, '', '/');
+    window.dispatchEvent(new Event('popstate'));
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
 

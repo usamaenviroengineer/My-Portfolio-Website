@@ -16,26 +16,49 @@ function MainApp() {
   const [activePage, setActivePage] = useState<string>('home');
   const { theme, toggleTheme } = useTheme();
 
-  // URL Hash synchronization
+  // URL Path synchronization (Clean SEO Path Routing with Hash migration)
   useEffect(() => {
-    const parseHash = () => {
-      const hash = window.location.hash.replace('#/', '').replace('#', '');
+    const parsePath = () => {
+      // 1. Migrating legacy Hash links to clean Pathname links transparently
+      if (window.location.hash) {
+        const hash = window.location.hash.replace('#/', '').replace('#', '');
+        const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'contact', 'ur-control-panel-x9a7'];
+        if (hash) {
+          const targetPage = hash === 'admin-hub-ur' ? 'ur-control-panel-x9a7' : hash;
+          if (validPages.includes(targetPage)) {
+            const cleanPath = targetPage === 'home' ? '/' : `/${targetPage}`;
+            window.history.replaceState(null, '', cleanPath);
+            setActivePage(targetPage);
+            return;
+          }
+        }
+      }
+
+      // 2. Standard path-based routing
+      const pathname = window.location.pathname;
+      const route = pathname.replace(/^\/+/, '').replace(/\/+$/, '');
       const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'contact', 'ur-control-panel-x9a7'];
-      if (hash && validPages.includes(hash)) {
-        setActivePage(hash);
+      
+      if (!route) {
+        setActivePage('home');
+      } else if (validPages.includes(route)) {
+        setActivePage(route);
+      } else if (route === 'admin-hub-ur') {
+        // legacy admin panel fallback path redirection
+        setActivePage('ur-control-panel-x9a7');
+        window.history.replaceState(null, '', '/ur-control-panel-x9a7');
       } else {
         setActivePage('home');
-        // fallback to default clean URL hash
-        window.history.replaceState(null, '', '#/home');
+        window.history.replaceState(null, '', '/');
       }
     };
 
-    // Parse on initial load
-    parseHash();
+    // Parse path on initial load
+    parsePath();
 
-    // Bind listener
-    window.addEventListener('hashchange', parseHash);
-    return () => window.removeEventListener('hashchange', parseHash);
+    // Bind browser popstate listener (back/forward keys)
+    window.addEventListener('popstate', parsePath);
+    return () => window.removeEventListener('popstate', parsePath);
   }, []);
 
   // Prevent Search Engine Crawlers & Indexers from indexing the private panels
@@ -56,8 +79,10 @@ function MainApp() {
   }, [activePage]);
 
   const handleNavigate = (pageId: string) => {
-    window.location.hash = `#/${pageId}`;
+    const targetPath = pageId === 'home' ? '/' : `/${pageId}`;
+    window.history.pushState(null, '', targetPath);
     window.scrollTo({ top: 0, behavior: 'instant' });
+    setActivePage(pageId);
   };
 
   const renderActiveView = () => {
