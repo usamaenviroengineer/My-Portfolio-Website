@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { USER_INFO, SKILLS_DATA } from '../data';
+import { usePortfolioData } from '../PortfolioDataContext';
 import { useTheme } from '../ThemeContext';
 import BrandedImage from './BrandedImage';
 import { Building, Flame, Trees, Droplets, Wind, Settings } from 'lucide-react';
 
 export default function AboutView() {
-  const [selectedSkillCategory, setSelectedSkillCategory] = useState<string>(SKILLS_DATA[0].category);
+  const { userInfo, skills } = usePortfolioData();
+  const [selectedSkillCategory, setSelectedSkillCategory] = useState<string>("");
   const { theme } = useTheme();
 
   const isLight = theme === 'light';
+
+  useEffect(() => {
+    if (skills && skills.length > 0 && !selectedSkillCategory) {
+      setSelectedSkillCategory(skills[0].category);
+    }
+  }, [skills]);
 
   const stats = [
     { value: "3.30 / 4.00", label: "GPA (1st Semester) core" },
@@ -25,7 +32,7 @@ export default function AboutView() {
     { icon: <Flame className="w-5 h-5 text-[#00C853]" />, label: "Renewable Integration Core", desc: "Configuring custom interactive calculators evaluating solar output potentials for consultants." }
   ];
 
-  const activeCategorySkills = SKILLS_DATA.find(grp => grp.category === selectedSkillCategory)?.skills || [];
+  const activeCategorySkills = skills.find(grp => grp.category === selectedSkillCategory)?.skills || [];
 
   return (
     <div id="about-view" className="w-full pt-32 pb-24 relative overflow-hidden">
@@ -40,7 +47,7 @@ export default function AboutView() {
             Meet Usama Rasheed
           </h1>
           <p className={`text-sm sm:text-base leading-relaxed ${
-            isLight ? 'text-zinc-650' : 'text-zinc-450'
+            isLight ? 'text-zinc-650' : 'text-zinc-440'
           }`}>
             I study Environmental Engineering at Mehran U.E.T - Jamshoro. Parallel to laboratory chemical assays and water treatment designs, I develop high-performance software systems and automated AI platforms addressing critical environmental and digital milestones.
           </p>
@@ -53,7 +60,7 @@ export default function AboutView() {
           <div className="lg:col-span-5">
             <div className="w-full max-w-[340px] sm:max-w-[380px] lg:max-w-full mx-auto">
               <BrandedImage 
-                src={USER_INFO.images.about} 
+                src={userInfo.images?.about || "https://myphotosss.netlify.app/6.png"} 
                 alt="Usama Rasheed Portrait About Page" 
               />
             </div>
@@ -121,7 +128,7 @@ export default function AboutView() {
           <div className="max-w-3xl mb-12">
             <span className="font-mono text-xs uppercase text-[#00C853] font-black tracking-widest block mb-2">Technical Core Vectors</span>
             <h2 className={`font-display text-3xl font-extrabold ${isLight ? 'text-zinc-900' : 'text-white'}`}>Sustainability & Climate Core</h2>
-            <p className={`text-xs sm:text-sm mt-3 ${isLight ? 'text-zinc-650' : 'text-zinc-400'}`}>
+            <p className={`text-xs sm:text-sm mt-3 ${isLight ? 'text-zinc-650' : 'text-zinc-440'}`}>
               Where environmental studies find robust analytical answers through modern tech loops.
             </p>
           </div>
@@ -150,7 +157,7 @@ export default function AboutView() {
                       isLight ? 'text-zinc-900' : 'text-white'
                     }`}>{item.label}</h3>
                     <p className={`text-xs leading-relaxed ${
-                      isLight ? 'text-zinc-605' : 'text-zinc-400'
+                      isLight ? 'text-zinc-650' : 'text-zinc-400'
                     }`}>{item.desc}</p>
                   </div>
                 </div>
@@ -170,79 +177,81 @@ export default function AboutView() {
         </div>
 
         {/* 3. DYNAMIC SKILLS SHOWCASE */}
-        <div className={`py-20 border-t relative ${isLight ? 'border-zinc-200' : 'border-white/5'}`}>
-          <div className="max-w-3xl mb-16">
-            <span className="font-mono text-xs uppercase text-[#00C853] font-black tracking-widest block mb-2">Systems Index</span>
-            <h2 className={`font-display text-3xl font-extrabold ${isLight ? 'text-zinc-900' : 'text-white'}`}>Technical Proficiency Matrix</h2>
-            <p className={`text-xs sm:text-sm mt-3 ${isLight ? 'text-zinc-650' : 'text-zinc-400'}`}>
-              An honest visual breakdown of skills acquired through MUET coursework and independent software client pipelines.
-            </p>
-          </div>
-
-          {/* Interactive tabs */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start w-full">
-            {/* Left categories list */}
-            <div className="lg:col-span-4 flex flex-col gap-2.5 w-full">
-              {SKILLS_DATA.map((grp) => (
-                <button
-                  key={grp.category}
-                  onClick={() => setSelectedSkillCategory(grp.category)}
-                  className={`py-4 px-6 rounded-xl border font-display text-xs font-bold tracking-wider uppercase transition-all duration-300 text-left cursor-pointer focus:outline-hidden ${
-                    selectedSkillCategory === grp.category
-                      ? isLight
-                        ? 'bg-[#00C853]/10 border-[#00C853] text-[#006428]'
-                        : 'bg-white/5 border-[#00C853] text-[#00c853]'
-                      : isLight
-                        ? 'border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
-                        : 'border-white/5 text-zinc-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  {grp.category}
-                </button>
-              ))}
+        {skills && skills.length > 0 && (
+          <div className={`py-20 border-t relative ${isLight ? 'border-zinc-200' : 'border-white/5'}`}>
+            <div className="max-w-3xl mb-16">
+              <span className="font-mono text-xs uppercase text-[#00C853] font-black tracking-widest block mb-2">Systems Index</span>
+              <h2 className={`font-display text-3xl font-extrabold ${isLight ? 'text-zinc-900' : 'text-white'}`}>Technical Proficiency Matrix</h2>
+              <p className={`text-xs sm:text-sm mt-3 ${isLight ? 'text-zinc-650' : 'text-zinc-440'}`}>
+                An honest visual breakdown of skills acquired through MUET coursework and independent software client pipelines.
+              </p>
             </div>
 
-            {/* Right progress sliders */}
-            <div className={`lg:col-span-8 p-8 border rounded-2xl w-full ${
-              isLight ? 'bg-white border-zinc-200 shadow-sm' : 'bg-[#121212] border-white/5'
-            }`}>
-              <h3 className={`font-display font-semibold text-sm uppercase tracking-wider mb-8 border-b pb-4 ${
-                isLight ? 'text-zinc-900 border-zinc-200' : 'text-white border-white/5'
-              }`}>
-                {selectedSkillCategory} Breakdown
-              </h3>
-              
-              <div className="space-y-6">
-                {activeCategorySkills.map((skill, index) => (
-                  <div key={skill.name} className="flex flex-col text-left">
-                    <div className="flex items-center justify-between mb-2">
-                       <span className={`text-sm font-medium font-display leading-tight ${isLight ? 'text-zinc-800' : 'text-zinc-300'}`}>{skill.name}</span>
-                      <span className="text-xs font-mono text-[#00C853] font-bold">{skill.percentage}%</span>
-                    </div>
-                    {/* Progress slider track */}
-                    <div className={`h-2.5 w-full rounded-full overflow-hidden border ${
-                      isLight ? 'bg-zinc-150 border-zinc-200/50' : 'bg-black/40 border-white/5'
-                    }`}>
-                      <motion.div
-                        className="h-full bg-[#00C853] rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${skill.percentage}%` }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                        key={`${selectedSkillCategory}-${skill.name}`} // Re-trigger on category swap
-                      />
-                    </div>
-                  </div>
+            {/* Interactive tabs */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start w-full">
+              {/* Left categories list */}
+              <div className="lg:col-span-4 flex flex-col gap-2.5 w-full">
+                {skills.map((grp) => (
+                  <button
+                    key={grp.category}
+                    onClick={() => setSelectedSkillCategory(grp.category)}
+                    className={`py-4 px-6 rounded-xl border font-display text-xs font-bold tracking-wider uppercase transition-all duration-300 text-left cursor-pointer focus:outline-hidden ${
+                      selectedSkillCategory === grp.category
+                        ? isLight
+                          ? 'bg-[#00C853]/10 border-[#00C853] text-[#006428]'
+                          : 'bg-white/5 border-[#00C853] text-[#00c853]'
+                        : isLight
+                          ? 'border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
+                          : 'border-white/5 text-zinc-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {grp.category}
+                  </button>
                 ))}
               </div>
 
-              {/* Specification note */}
-              <div className="mt-8 flex items-start gap-2 text-[10px] font-mono leading-normal uppercase text-zinc-500">
-                <Settings className="w-3.5 h-3.5 text-[#00C853] spin shrink-0 mt-0.5" />
-                <span>Percentage figures are computed based on project count deployments and certified MUET mechanical assessments.</span>
+              {/* Right progress sliders */}
+              <div className={`lg:col-span-8 p-8 border rounded-2xl w-full ${
+                isLight ? 'bg-white border-zinc-200 shadow-sm' : 'bg-[#121212] border-white/5'
+              }`}>
+                <h3 className={`font-display font-semibold text-sm uppercase tracking-wider mb-8 border-b pb-4 ${
+                  isLight ? 'text-zinc-900 border-zinc-200' : 'text-white border-white/5'
+                }`}>
+                  {selectedSkillCategory} Breakdown
+                </h3>
+                
+                <div className="space-y-6">
+                  {activeCategorySkills.map((skill) => (
+                    <div key={skill.name} className="flex flex-col text-left">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-sm font-medium font-display leading-tight ${isLight ? 'text-zinc-800' : 'text-zinc-300'}`}>{skill.name}</span>
+                        <span className="text-xs font-mono text-[#00C853] font-bold">{skill.percentage}%</span>
+                      </div>
+                      {/* Progress slider track */}
+                      <div className={`h-2.5 w-full rounded-full overflow-hidden border ${
+                        isLight ? 'bg-zinc-150 border-zinc-200/50' : 'bg-black/40 border-white/5'
+                      }`}>
+                        <motion.div
+                          className="h-full bg-[#00C853] rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${skill.percentage}%` }}
+                          transition={{ duration: 0.8, ease: "easeOut" }}
+                          key={`${selectedSkillCategory}-${skill.name}`} // Re-trigger on category swap
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Specification note */}
+                <div className="mt-8 flex items-start gap-2 text-[10px] font-mono leading-normal uppercase text-zinc-500">
+                  <Settings className="w-3.5 h-3.5 text-[#00C853] spin shrink-0 mt-0.5" />
+                  <span>Percentage figures are computed based on project count deployments and certified MUET mechanical assessments.</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
       </div>
     </div>

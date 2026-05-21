@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { TIMELINE_DATA } from '../data';
+import { usePortfolioData } from '../PortfolioDataContext';
 import { useTheme } from '../ThemeContext';
 import { Briefcase, GraduationCap, Users, Calendar, MapPin, CheckCircle } from 'lucide-react';
 
 export default function ExperienceView() {
+  const { timeline } = usePortfolioData();
   const [activeTab, setActiveTab] = useState<string>('All');
   const { theme } = useTheme();
 
   const isLight = theme === 'light';
 
   const filteredTimeline = activeTab === 'All'
-    ? TIMELINE_DATA
-    : TIMELINE_DATA.filter(event => {
+    ? timeline
+    : timeline.filter(event => {
         if (activeTab === 'academic') return event.category === 'academic';
         if (activeTab === 'professional') return event.category === 'professional';
         if (activeTab === 'volunteer') return event.category === 'volunteer';
@@ -62,10 +63,10 @@ export default function ExperienceView() {
               onClick={() => setActiveTab(tab.id)}
               className={`pb-4 px-4 font-display text-xs font-bold tracking-wider uppercase transition-colors relative cursor-pointer focus:outline-hidden ${
                 activeTab === tab.id 
-                  ? 'text-[#00C853]' 
+                  ? 'text-[#00C853] font-black' 
                   : isLight 
-                    ? 'text-zinc-500 hover:text-zinc-900' 
-                    : 'text-zinc-400 hover:text-white'
+                    ? 'text-zinc-500 hover:text-zinc-900 font-semibold' 
+                    : 'text-zinc-400 hover:text-white font-semibold'
               }`}
             >
               {tab.label}
@@ -110,7 +111,7 @@ export default function ExperienceView() {
                 {/* 2. Content Card */}
                 <div className={`p-8 border rounded-2xl transition-all shadow-lg ${
                   isLight 
-                    ? 'bg-white border-zinc-200/85 hover:border-[#00C853]/45 shadow-sm hover:shadow-md' 
+                    ? 'bg-white border-zinc-200/85 hover:border-[#00C853]/45' 
                     : 'bg-[#121212] border-white/5 hover:border-[#00C853]/25 shadow-2xl'
                 }`}>
                   {/* Title & dates info */}
@@ -145,7 +146,7 @@ export default function ExperienceView() {
 
                   {/* Bullet description text listings */}
                   <ul className="space-y-2 mb-6">
-                    {event.description.map((bullet, idx) => (
+                    {(event.description || []).map((bullet, idx) => (
                       <li key={idx} className="flex items-start gap-2.5 text-xs leading-relaxed font-sans">
                         <CheckCircle className="w-3.5 h-3.5 text-[#00C853] shrink-0 mt-0.5" />
                         <span className={`${isLight ? 'text-zinc-650' : 'text-zinc-400'}`}>{bullet}</span>
@@ -157,12 +158,12 @@ export default function ExperienceView() {
                   <div className={`flex flex-wrap gap-1.5 pt-4 border-t ${
                     isLight ? 'border-zinc-150' : 'border-white/5'
                   }`}>
-                    {event.skills.map((skill) => (
+                    {(event.skills || []).map((skill) => (
                       <span 
                         key={skill} 
                         className={`font-mono text-[9px] px-2.5 py-1 rounded border transition-colors ${
                           isLight 
-                            ? 'bg-zinc-50 border-zinc-200 text-zinc-605 group-hover:bg-zinc-100' 
+                            ? 'bg-zinc-50 border-zinc-200 text-zinc-650' 
                             : 'bg-white/5 text-zinc-400 border-white/5'
                         }`}
                       >

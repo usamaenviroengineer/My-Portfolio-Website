@@ -1,7 +1,8 @@
 import React from 'react';
 import { ArrowRight, ArrowUpRight, CheckCircle, Leaf, Cpu, Code, BookOpen, LineChart } from 'lucide-react';
 import { motion } from 'motion/react';
-import { USER_INFO, PROJECTS_DATA, CLIENT_REASONS, HOME_FUN_FACTS } from '../data';
+import { usePortfolioData } from '../PortfolioDataContext';
+import { CLIENT_REASONS, HOME_FUN_FACTS } from '../data';
 import { useTheme } from '../ThemeContext';
 import BrandedImage from './BrandedImage';
 
@@ -10,8 +11,9 @@ interface HomeViewProps {
 }
 
 export default function HomeView({ onNavigate }: HomeViewProps) {
+  const { projects, userInfo } = usePortfolioData();
   const { theme } = useTheme();
-  const indexProjects = PROJECTS_DATA.slice(0, 3);
+  const indexProjects = (projects || []).slice(0, 3);
   const isLight = theme === 'light';
 
   // Map icon names from data to components
@@ -68,7 +70,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00C853] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00C853]"></span>
               </span>
-              <span className="font-mono text-[9px] uppercase tracking-wider font-extrabold">Available for consulting & development</span>
+              <span className="font-mono text-[9px] uppercase tracking-wider font-extrabold font-black">Available for consulting & development</span>
             </motion.div>
 
             {/* Giant Title */}
@@ -92,7 +94,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
                 isLight ? 'text-zinc-800' : 'text-zinc-100'
               }`}
             >
-              <span className={`text-transparent bg-clip-text bg-linear-to-r green-text-glow ${
+              <span className={`text-transparent bg-clip-text bg-linear-to-r green-text-glow font-extrabold ${
                 isLight ? 'from-zinc-950 via-[#006428] to-[#00C853]' : 'from-white via-[#00C853] to-emerald-400'
               }`}>
                 Environmental Engineer & AI-Powered Tech Specialist
@@ -105,7 +107,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
               className={`text-base sm:text-lg tracking-wide max-w-xl leading-relaxed mb-10 ${
-                isLight ? 'text-zinc-650' : 'text-zinc-400'
+                isLight ? 'text-zinc-650' : 'text-zinc-440'
               }`}
             >
               Passionate about combining sustainability, artificial intelligence, and modern development to create smart digital solutions for businesses, environmental projects, and future-focused innovation.
@@ -173,7 +175,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
             <div className="w-full max-w-[340px] sm:max-w-[380px] lg:max-w-full">
               {/* Premium image adjustments & lighting frame wrapper */}
               <BrandedImage 
-                src={USER_INFO.images.hero} 
+                src={userInfo.images?.hero || "https://myphotosss.netlify.app/4.png"} 
                 alt="Usama Rasheed Portrait Hero" 
               />
             </div>
@@ -205,7 +207,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 className={`group relative p-8 border rounded-2xl transition-all duration-300 hover:shadow-xl ${
                   isLight 
-                    ? 'bg-white border-zinc-200/80 hover:border-[#00C853]/40 hover:shadow-zinc-200' 
+                    ? 'bg-white border-zinc-200/80 hover:border-[#00C853]/40' 
                     : 'bg-[#141414] border-white/5 hover:border-[#00C853]/30'
                 }`}
               >
@@ -223,7 +225,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
                   isLight ? 'text-zinc-900' : 'text-white'
                 }`}>{item.title}</h3>
                 <p className={`text-sm leading-relaxed ${
-                  isLight ? 'text-zinc-600' : 'text-zinc-400'
+                  isLight ? 'text-zinc-650' : 'text-zinc-440'
                 }`}>{item.desc}</p>
               </motion.div>
             ))}
@@ -242,12 +244,12 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
               }`}
             >
               <div className="text-left">
-                <span className="font-mono text-[9px] uppercase text-[#00C853]/80 tracking-widest font-black">Solutions Stack</span>
+                <span className="font-mono text-[9px] uppercase text-[#00C853]/80 tracking-widest font-black font-semibold">Solutions Stack</span>
                 <h3 className={`font-display font-extrabold text-xl mt-4 mb-2 ${
                   isLight ? 'text-zinc-900' : 'text-white'
                 }`}>Need a custom workspace workflow?</h3>
                 <p className={`text-xs leading-relaxed ${
-                  isLight ? 'text-zinc-650' : 'text-zinc-400'
+                  isLight ? 'text-zinc-650' : 'text-zinc-440'
                 }`}>
                   I configure custom administrative spreadsheets, local database sync pipelines, high converting storefront layouts, SEO audits, and eco-calculators tailored for your exact corporate roadmap.
                 </p>
@@ -274,7 +276,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
                 Why Hire Usama?
               </h2>
               <p className={`text-sm sm:text-base leading-relaxed mb-8 ${
-                isLight ? 'text-zinc-650' : 'text-zinc-400'
+                isLight ? 'text-zinc-650' : 'text-zinc-440'
               }`}>
                 By marrying structural analysis from environmental studies with modern server architectures and AI models, I create secure, fast, and modern digital materials that elevate user conversion rates and professional compliance scores.
               </p>
@@ -284,7 +286,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
                   <div className="w-5 h-5 rounded bg-[#00C853]/15 flex items-center justify-center mt-0.5 shrink-0">
                     <CheckCircle className="w-3.5 h-3.5 text-[#00C853]" />
                   </div>
-                  <span className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-300'}`}>
+                  <span className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-350'}`}>
                     Active problem solving tailored for exact customer bottlenecks
                   </span>
                 </div>
@@ -292,7 +294,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
                   <div className="w-5 h-5 rounded bg-[#00C853]/15 flex items-center justify-center mt-0.5 shrink-0">
                     <CheckCircle className="w-3.5 h-3.5 text-[#00C853]" />
                   </div>
-                  <span className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-300'}`}>
+                  <span className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-350'}`}>
                     Minimalist, speed-optimized designs (inspired by Apple with strong grids)
                   </span>
                 </div>
@@ -333,7 +335,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
                     isLight ? 'text-zinc-900' : 'text-white'
                   }`}>{reason.title}</h3>
                   <p className={`text-xs leading-relaxed ${
-                    isLight ? 'text-zinc-600' : 'text-zinc-400'
+                    isLight ? 'text-zinc-650' : 'text-zinc-440'
                   }`}>{reason.description}</p>
                 </div>
               ))}
@@ -423,7 +425,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
                   {/* Tech item row */}
                   <div>
                     <div className="flex flex-wrap gap-1.5 mb-6">
-                      {project.technologies.slice(0, 3).map((tech, idx) => (
+                      {(project.technologies || []).slice(0, 3).map((tech, idx) => (
                         <span 
                           key={idx} 
                           className={`font-mono text-[9px] px-2 py-0.5 rounded border ${
@@ -435,7 +437,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
                           {tech}
                         </span>
                       ))}
-                      {project.technologies.length > 3 && (
+                      {project.technologies && project.technologies.length > 3 && (
                         <span className={`font-mono text-[9px] self-center pl-1 ${isLight ? 'text-zinc-450 font-semibold' : 'text-zinc-500'}`}>
                           +{project.technologies.length - 3} more
                         </span>
@@ -461,7 +463,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
       <section id="cta-contact-section" className={`py-24 relative overflow-hidden transition-all duration-500 border-t ${
         isLight 
           ? 'bg-radial from-[#00C853]/6 to-zinc-50 border-zinc-200' 
-          : 'bg-radial from-[#00C853]/10 to-[#0A0A0A] border-white/5'
+          : 'bg-[#0A0A0A] border-white/5'
       }`}>
         <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#00C853]/15 text-[#00C853] border border-[#00C853]/30 font-mono text-[10px] font-black rounded-full uppercase tracking-widest mb-6">
@@ -473,7 +475,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
             Have an engineering blueprint, web project, or AI model in mind?
           </h2>
           <p className={`text-sm max-w-xl mx-auto leading-relaxed mb-10 ${
-            isLight ? 'text-zinc-600' : 'text-zinc-400'
+            isLight ? 'text-zinc-650' : 'text-zinc-440'
           }`}>
             Let's structure a plan to digitize your spreadsheets, integrate automated APIs, optimize visual Shopify/WordPress frontends, or deploy carbon studies.
           </p>

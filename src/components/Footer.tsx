@@ -1,6 +1,6 @@
 import React from 'react';
 import { Leaf, Github, Mail, Facebook, Instagram, Youtube, MessageCircle } from 'lucide-react';
-import { USER_INFO } from '../data';
+import { usePortfolioData } from '../PortfolioDataContext';
 import { useTheme } from '../ThemeContext';
 
 interface FooterProps {
@@ -8,6 +8,7 @@ interface FooterProps {
 }
 
 export default function Footer({ onNavigate }: FooterProps) {
+  const { userInfo } = usePortfolioData();
   const currentYear = new Date().getFullYear();
   const { theme } = useTheme();
 
@@ -70,71 +71,81 @@ export default function Footer({ onNavigate }: FooterProps) {
             </p>
             {/* Social Grid */}
             <div className="flex items-center gap-3">
-              <a 
-                href={USER_INFO.socials.github} 
-                target="_blank" 
-                rel="noreferrer" 
-                className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-300 border ${
-                  isLight 
-                    ? 'bg-white border-zinc-200 text-zinc-650 hover:text-[#00C853] hover:border-[#00C853]/45 shadow-xs' 
-                    : 'bg-white/5 border border-white/5 text-zinc-400 hover:text-[#00C853] hover:border-[#00C853]/40'
-                }`}
-                aria-label="GitHub Profile"
-              >
-                <Github className="w-4 h-4" />
-              </a>
-              <a 
-                href={USER_INFO.socials.youtube} 
-                target="_blank" 
-                rel="noreferrer" 
-                className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-300 border ${
-                  isLight 
-                    ? 'bg-white border-zinc-200 text-zinc-650 hover:text-[#00C853] hover:border-[#00C853]/45 shadow-xs' 
-                    : 'bg-white/5 border border-white/5 text-zinc-400 hover:text-[#00C853] hover:border-[#00C853]/40'
-                }`}
-                aria-label="YouTube Profile"
-              >
-                <Youtube className="w-4 h-4" />
-              </a>
-              <a 
-                href={USER_INFO.socials.instagram} 
-                target="_blank" 
-                rel="noreferrer" 
-                className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-300 border ${
-                  isLight 
-                    ? 'bg-white border-zinc-200 text-zinc-650 hover:text-[#00C853] hover:border-[#00C853]/45 shadow-xs' 
-                    : 'bg-white/5 border border-white/5 text-zinc-400 hover:text-[#00C853] hover:border-[#00C853]/40'
-                }`}
-                aria-label="Instagram Profile"
-              >
-                <Instagram className="w-4 h-4" />
-              </a>
-              <a 
-                href={USER_INFO.socials.facebook} 
-                target="_blank" 
-                rel="noreferrer" 
-                className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-300 border ${
-                  isLight 
-                    ? 'bg-white border-zinc-200 text-zinc-650 hover:text-[#00C853] hover:border-[#00C853]/45 shadow-xs' 
-                    : 'bg-white/5 border border-white/5 text-zinc-400 hover:text-[#00C853] hover:border-[#00C853]/40'
-                }`}
-                aria-label="Facebook Profile"
-              >
-                <Facebook className="w-4 h-4" />
-              </a>
-              <a 
-                href={USER_INFO.socials.whatsapp} 
-                target="_blank" 
-                rel="noreferrer" 
-                className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-300 border ${
-                  isLight 
-                    ? 'bg-white border-zinc-200 text-zinc-650 hover:text-[#00C853] hover:border-[#00C853]/45 shadow-xs' 
-                    : 'bg-white/5 border border-white/5 text-zinc-400 hover:text-[#00C853] hover:border-[#00C853]/40'
-                }`}
-                aria-label="WhatsApp Profile"
-              >
-                <MessageCircle className="w-4 h-4" />
-              </a>
+              {userInfo.socials?.github && (
+                <a 
+                  href={userInfo.socials.github} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-300 border ${
+                    isLight 
+                      ? 'bg-white border-zinc-200 text-zinc-650 hover:text-[#00C853] hover:border-[#00C853]/45 shadow-xs' 
+                      : 'bg-white/5 border border-white/5 text-zinc-400 hover:text-[#00C853] hover:border-[#00C853]/40'
+                  }`}
+                  aria-label="GitHub Profile"
+                >
+                  <Github className="w-4 h-4" />
+                </a>
+              )}
+              {userInfo.socials?.youtube && (
+                <a 
+                  href={userInfo.socials.youtube} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-300 border ${
+                    isLight 
+                      ? 'bg-white border-zinc-200 text-zinc-650 hover:text-[#00C853] hover:border-[#00C853]/45 shadow-xs' 
+                      : 'bg-white/5 border border-white/5 text-zinc-400 hover:text-[#00C853] hover:border-[#00C853]/40'
+                  }`}
+                  aria-label="YouTube Profile"
+                >
+                  <Youtube className="w-4 h-4" />
+                </a>
+              )}
+              {userInfo.socials?.instagram && (
+                <a 
+                  href={userInfo.socials.instagram} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-300 border ${
+                    isLight 
+                      ? 'bg-white border-zinc-200 text-zinc-650 hover:text-[#00C853] hover:border-[#00C853]/45 shadow-xs' 
+                      : 'bg-white/5 border border-white/5 text-zinc-400 hover:text-[#00C853] hover:border-[#00C853]/40'
+                  }`}
+                  aria-label="Instagram Profile"
+                >
+                  <Instagram className="w-4 h-4" />
+                </a>
+              )}
+              {userInfo.socials?.facebook && (
+                <a 
+                  href={userInfo.socials.facebook} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-300 border ${
+                    isLight 
+                      ? 'bg-white border-zinc-200 text-zinc-650 hover:text-[#00C853] hover:border-[#00C853]/45 shadow-xs' 
+                      : 'bg-white/5 border border-white/5 text-zinc-400 hover:text-[#00C853] hover:border-[#00C853]/40'
+                  }`}
+                  aria-label="Facebook Profile"
+                >
+                  <Facebook className="w-4 h-4" />
+                </a>
+              )}
+              {userInfo.socials?.whatsapp && (
+                <a 
+                  href={userInfo.socials.whatsapp} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-300 border ${
+                    isLight 
+                      ? 'bg-white border-zinc-200 text-zinc-650 hover:text-[#00C853] hover:border-[#00C853]/45 shadow-xs' 
+                      : 'bg-white/5 border border-white/5 text-zinc-400 hover:text-[#00C853] hover:border-[#00C853]/40'
+                  }`}
+                  aria-label="WhatsApp Profile"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                </a>
+              )}
             </div>
           </div>
 
@@ -166,7 +177,7 @@ export default function Footer({ onNavigate }: FooterProps) {
             }`}>Inquiries</h4>
             <div className="space-y-4">
               <a 
-                href={`mailto:${USER_INFO.email}`}
+                href={`mailto:${userInfo.email}`}
                 className={`group flex items-center gap-3 transition-colors ${
                   isLight ? 'text-zinc-600 hover:text-zinc-900 font-bold' : 'text-zinc-400 hover:text-white'
                 }`}
@@ -176,12 +187,11 @@ export default function Footer({ onNavigate }: FooterProps) {
                 }`}>
                   <Mail className="w-3.5 h-3.5 text-[#00C853]" />
                 </div>
-                <span className="text-xs break-all truncate font-mono">{USER_INFO.email}</span>
+                <span className="text-xs break-all truncate font-mono">{userInfo.email}</span>
               </a>
               <div className="font-mono text-[10px] space-y-0.5">
                 <div className="uppercase text-[#00C853] font-bold tracking-widest text-[9px]">Location Core</div>
-                <div className={isLight ? 'text-zinc-600' : 'text-zinc-500'}>Fazalabad Colony Matli, Badin</div>
-                <div className={isLight ? 'text-zinc-605' : 'text-zinc-500'}>Sindh - Pakistan</div>
+                <div className={isLight ? 'text-zinc-600' : 'text-zinc-500'}>{userInfo.location}</div>
               </div>
             </div>
           </div>

@@ -1,11 +1,12 @@
 import React, { useState, FormEvent, ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { USER_INFO } from '../data';
+import { usePortfolioData } from '../PortfolioDataContext';
 import { useTheme } from '../ThemeContext';
 import BrandedImage from './BrandedImage';
 import { Mail, MapPin, Send, CheckCircle, Clock } from 'lucide-react';
 
 export default function ContactView() {
+  const { userInfo } = usePortfolioData();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -15,29 +16,49 @@ export default function ContactView() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { theme } = useTheme();
 
   const isLight = theme === 'light';
 
-  // Simulated coordinate locks for vector geographic locator block
-  const [selectedPin, setSelectedPin] = useState<'muet' | 'karachi'>('muet');
-
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setIsSuccess(true);
-      // Reset form fields
-      setFormData({
-        name: '',
-        email: '',
-        service: 'AI Solutions & Web Dev',
-        message: ''
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          subject: formData.service,
+          message: formData.message
+        })
       });
-    }, 1200);
+
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        setIsSuccess(true);
+        setFormData({
+          name: '',
+          email: '',
+          service: 'AI Solutions & Web Dev',
+          message: ''
+        });
+      } else {
+        setErrorMessage(data.error || 'Failed to dispatch message. Please retry shortly.');
+      }
+    } catch (err) {
+      console.error('Contact submit error:', err);
+      setErrorMessage('Network error occurred. The portfolio server seems unresponsive. Please retry.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleTextChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -52,19 +73,6 @@ export default function ContactView() {
       ...prev,
       service: e.target.value
     }));
-  };
-
-  const mapPins = {
-    muet: {
-      name: "Residence HQ",
-      coords: "25.0416° N, 68.6575° E",
-      desc: "Fazalabad Colony Matli, Badin, Sindh - Pakistan",
-    },
-    karachi: {
-      name: "Karachi Support Hub",
-      coords: "24.8607° N, 67.0011° E",
-      desc: "Unscripted Studio Client Deployments Hub",
-    }
   };
 
   const isFormValid = formData.name.trim() !== '' && formData.email.trim() !== '' && formData.message.trim() !== '';
@@ -95,7 +103,7 @@ export default function ContactView() {
             {/* Quick Contact Info Info */}
             <div className="grid grid-cols-1 gap-4 font-display">
               <a 
-                href={`mailto:${USER_INFO.email}`}
+                href={`mailto:${userInfo.email}`}
                 className={`group flex items-center gap-4 p-5 border rounded-2xl transition-all ${
                   isLight 
                     ? 'bg-white border-zinc-200 hover:border-[#00C853]/45 shadow-sm' 
@@ -109,7 +117,7 @@ export default function ContactView() {
                 </div>
                 <div className="overflow-hidden p-0.5">
                   <span className={`block text-[9px] uppercase font-mono tracking-widest ${isLight ? 'text-zinc-450' : 'text-zinc-500'}`}>SECURE CONVERSATION</span>
-                  <span className={`block text-xs font-bold truncate transition-colors leading-relaxed ${isLight ? 'text-zinc-800' : 'text-zinc-300'}`}>{USER_INFO.email}</span>
+                  <span className={`block text-xs font-bold truncate transition-colors leading-relaxed ${isLight ? 'text-zinc-800' : 'text-zinc-300'}`}>{userInfo.email}</span>
                 </div>
               </a>
 
@@ -123,7 +131,7 @@ export default function ContactView() {
                 </div>
                 <div className="p-0.5">
                   <span className={`block text-[9px] uppercase font-mono tracking-widest ${isLight ? 'text-zinc-450' : 'text-zinc-500'}`}>LOCAL REGION</span>
-                  <span className={`block text-xs font-bold leading-relaxed ${isLight ? 'text-zinc-800' : 'text-zinc-300'}`}>Fazalabad Colony Matli, Badin, Sindh - Pakistan</span>
+                  <span className={`block text-xs font-bold leading-relaxed ${isLight ? 'text-zinc-800' : 'text-zinc-300'}`}>{userInfo.location}</span>
                 </div>
               </div>
             </div>
@@ -131,7 +139,7 @@ export default function ContactView() {
             {/* Free-floating Branded Image representing Personal Contact Brand */}
             <div className="w-full pt-4 flex justify-center">
               <BrandedImage 
-                src={USER_INFO.images.contact} 
+                src={userInfo.images?.contact || "https://myphotosss.netlify.app/3.png"} 
                 className="max-w-[340px] w-full"
                 alt="Usama contact artwork" 
                 aspectRatio="aspect-[4/5]"
@@ -147,6 +155,7 @@ export default function ContactView() {
             <AnimatePresence mode="wait">
               {!isSuccess ? (
                 <motion.form 
+                  key="contact-form"
                   id="contact-form-node"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -156,13 +165,19 @@ export default function ContactView() {
                 >
                   <div className={`text-left mb-8 border-b pb-4 ${isLight ? 'border-zinc-150' : 'border-white/5'}`}>
                     <h3 className={`font-display font-bold text-lg ${isLight ? 'text-zinc-900' : 'text-white'}`}>Direct Message Receiver</h3>
-                    <p className={`text-xs mt-1 leading-normal ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>Form submissions are validated and logged for instant response queues.</p>
+                    <p className={`text-xs mt-1 leading-normal ${isLight ? 'text-zinc-650' : 'text-zinc-440'}`}>Form submissions are validated and logged for instant response queues.</p>
                   </div>
+
+                  {errorMessage && (
+                    <div className="p-4 bg-red-600/10 border border-red-500/20 text-red-400 font-mono text-xs rounded-xl text-left">
+                      {errorMessage}
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-left">
                     <div className="flex flex-col">
                       <label htmlFor="name" className={`font-display font-bold text-[10px] uppercase tracking-wider mb-2 ${
-                        isLight ? 'text-zinc-500' : 'text-zinc-450'
+                        isLight ? 'text-zinc-500' : 'text-zinc-455'
                       }`}>Full Name</label>
                       <input
                         type="text"
@@ -182,7 +197,7 @@ export default function ContactView() {
                     </div>
                     <div className="flex flex-col">
                       <label htmlFor="email" className={`font-display font-bold text-[10px] uppercase tracking-wider mb-2 ${
-                        isLight ? 'text-zinc-500' : 'text-zinc-450'
+                        isLight ? 'text-zinc-500' : 'text-zinc-455'
                       }`}>Corporate Email</label>
                       <input
                         type="email"
@@ -205,7 +220,7 @@ export default function ContactView() {
                   {/* Dropdown service selector */}
                   <div className="flex flex-col text-left">
                     <label htmlFor="service" className={`font-display font-bold text-[10px] uppercase tracking-wider mb-2 ${
-                      isLight ? 'text-zinc-500' : 'text-zinc-450'
+                      isLight ? 'text-zinc-500' : 'text-zinc-455'
                     }`}>Core Requirement</label>
                     <select
                       name="service"
@@ -219,17 +234,17 @@ export default function ContactView() {
                           : 'bg-black/40 border-white/5 focus:border-[#00C853] text-zinc-350'
                       }`}
                     >
-                      <option className={isLight ? "bg-white text-zinc-90 w-full" : "bg-[#0a0a0a]"} value="AI Solutions & Web Dev">AI Solutions & Web Development</option>
-                      <option className={isLight ? "bg-white text-zinc-90 w-full" : "bg-[#0a0a0a]"} value="Environmental Consulting">Environmental / Water Consultation</option>
-                      <option className={isLight ? "bg-white text-zinc-90 w-full" : "bg-[#0a0a0a]"} value="WordPress Custom Theme">WordPress Theme Customizer</option>
-                      <option className={isLight ? "bg-white text-zinc-90 w-full" : "bg-[#0a0a0a]"} value="Shopify Dropshipping E-commerce">Shopify Store Assembly</option>
-                      <option className={isLight ? "bg-white text-zinc-90 w-full" : "bg-[#0a0a0a]"} value="Branding & Media Post-Production">Branding or Video Editing</option>
+                      <option className={isLight ? "bg-white text-zinc-90 w-full" : "bg-[#0a0a0a] text-white"} value="AI Solutions & Web Dev">AI Solutions & Web Development</option>
+                      <option className={isLight ? "bg-white text-zinc-90 w-full" : "bg-[#0a0a0a] text-white"} value="Environmental Consulting">Environmental / Water Consultation</option>
+                      <option className={isLight ? "bg-white text-zinc-90 w-full" : "bg-[#0a0a0a] text-white"} value="WordPress Custom Theme">WordPress Theme Customizer</option>
+                      <option className={isLight ? "bg-white text-zinc-90 w-full" : "bg-[#0a0a0a] text-white"} value="Shopify Dropshipping E-commerce">Shopify Store Assembly</option>
+                      <option className={isLight ? "bg-white text-zinc-90 w-full" : "bg-[#0a0a0a] text-white"} value="Branding & Media Post-Production">Branding or Video Editing</option>
                     </select>
                   </div>
 
                   <div className="flex flex-col text-left">
                     <label htmlFor="message" className={`font-display font-bold text-[10px] uppercase tracking-wider mb-2 ${
-                      isLight ? 'text-zinc-500' : 'text-zinc-450'
+                      isLight ? 'text-zinc-500' : 'text-zinc-455'
                     }`}>Brief Specific Scopes</label>
                     <textarea
                       name="message"
@@ -243,7 +258,7 @@ export default function ContactView() {
                       className={`px-4 py-3 rounded-xl text-xs outline-hidden transition-all focus:ring-1 focus:ring-[#00C853]/40 border resize-none ${
                         isLight 
                           ? 'bg-zinc-50 hover:bg-zinc-100 border-zinc-200 focus:border-[#00C853] text-zinc-800 focus:bg-white' 
-                          : 'bg-black/40 border-white/5 hover:border-white/15 focus:border-[#00C853] text-zinc-350'
+                          : 'bg-black/40 border-white/5 hover:border-white/15 focus:border-[#00C853] text-zinc-350 bg-black/20'
                       }`}
                     />
                   </div>
@@ -260,13 +275,14 @@ export default function ContactView() {
                     }`}
                   >
                     <span className="flex items-center justify-center gap-2 relative z-10 transition-transform">
-                      {isSubmitting ? 'Decrypting Transmission...' : 'Transmit Specification Packet'}
+                      {isSubmitting ? 'Transmitting Specification...' : 'Transmit Specification Packet'}
                       <Send className="w-3.5 h-3.5" />
                     </span>
                   </button>
                 </motion.form>
               ) : (
                 <motion.div
+                  key="contact-success"
                   id="contact-success-state"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -287,7 +303,7 @@ export default function ContactView() {
                       <Clock className="w-4 h-4 text-[#00C853] shrink-0 mt-0.5" />
                       <div>
                         <span className={`block text-xs font-bold ${isLight ? 'text-zinc-900' : 'text-white'}`}>Average Response SLA</span>
-                        <span className={`block text-xs ${isLight ? 'text-zinc-650' : 'text-zinc-400'}`}>Within 10 hours directly to your corporate inbox.</span>
+                        <span className={`block text-xs ${isLight ? 'text-zinc-650' : 'text-zinc-440'}`}>Within 10 hours directly to your corporate inbox.</span>
                       </div>
                     </div>
                     <div className={`border-t pt-3 mt-3 ${isLight ? 'border-zinc-200' : 'border-white/5'}`}>

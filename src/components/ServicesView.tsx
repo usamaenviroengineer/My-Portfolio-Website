@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { SERVICES_DATA } from '../data';
+import { usePortfolioData } from '../PortfolioDataContext';
 import * as LucideIcons from 'lucide-react';
 import { useTheme } from '../ThemeContext';
 import { ArrowUpRight, ShieldCheck } from 'lucide-react';
@@ -11,6 +11,7 @@ interface ServicesViewProps {
 }
 
 export default function ServicesView({ onNavigate }: ServicesViewProps) {
+  const { services } = usePortfolioData();
   const { theme } = useTheme();
 
   const isLight = theme === 'light';
@@ -56,7 +57,7 @@ export default function ServicesView({ onNavigate }: ServicesViewProps) {
 
         {/* Categories Separator Tabs / Headers */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {SERVICES_DATA.map((srv, index) => (
+          {services.map((srv, index) => (
             <motion.div
               key={srv.id}
               initial={{ opacity: 0, y: 15 }}
@@ -104,7 +105,7 @@ export default function ServicesView({ onNavigate }: ServicesViewProps) {
                 </div>
 
                 <p className={`text-xs sm:text-sm leading-relaxed mb-6 ${
-                  isLight ? 'text-zinc-600' : 'text-zinc-400'
+                  isLight ? 'text-zinc-650' : 'text-zinc-440'
                 }`}>
                   {srv.description}
                 </p>
@@ -113,7 +114,7 @@ export default function ServicesView({ onNavigate }: ServicesViewProps) {
                 <ul className={`space-y-2 mb-8 border-t pt-4 ${
                   isLight ? 'border-zinc-150' : 'border-white/5'
                 }`}>
-                  {srv.bullets.map((bullet, idx) => (
+                  {(srv.bullets || []).map((bullet, idx) => (
                     <li key={idx} className="flex items-start gap-2 text-xs">
                       <span className="text-[#00C853] text-[10px] mt-0.5 select-none shrink-0 font-bold">◇</span>
                       <span className={`${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>{bullet}</span>
@@ -128,11 +129,11 @@ export default function ServicesView({ onNavigate }: ServicesViewProps) {
                 className={`group/btn flex items-center justify-between text-left px-4 py-2.5 border rounded-lg transition-colors w-full cursor-pointer focus:outline-hidden ${
                   isLight 
                     ? 'bg-zinc-50 hover:bg-zinc-100 border-zinc-200 text-zinc-700' 
-                    : 'bg-[#0D0D0D] hover:bg-white/5 border-white/5 text-zinc-400'
+                    : 'bg-[#0D0D0D] hover:bg-white/5 border-white/5 text-zinc-450'
                 }`}
               >
                 <span className={`font-mono text-[10px] uppercase font-bold transition-colors ${
-                  isLight ? 'text-zinc-500 group-hover/btn:text-black' : 'text-zinc-400 group-hover/btn:text-white'
+                  isLight ? 'text-zinc-500' : 'text-zinc-400'
                 }`}>Request Spec Sheet</span>
                 <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover/btn:text-[#00C853] transition-colors" />
               </button>
@@ -153,7 +154,7 @@ export default function ServicesView({ onNavigate }: ServicesViewProps) {
                 isLight ? 'text-zinc-900' : 'text-white'
               }`}>Quality Guarantee Log</h4>
               <p className={`text-xs leading-relaxed mt-1 ${
-                isLight ? 'text-zinc-600' : 'text-zinc-400'
+                isLight ? 'text-zinc-650' : 'text-zinc-400'
               }`}>
                 All software deployments delivered by Unscripted Studio come wrapped with 1-month high tier maintenance. Academic consulting reports pass standard peer-checked plagiarism engines.
               </p>

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { PROJECTS_DATA } from '../data';
+import { usePortfolioData } from '../PortfolioDataContext';
 import { Project } from '../types';
 import { useTheme } from '../ThemeContext';
 import { ExternalLink, Github, X, Compass, ShieldAlert, Award, ArrowRight } from 'lucide-react';
 
 export default function PortfolioView() {
+  const { projects } = usePortfolioData();
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const { theme } = useTheme();
@@ -15,8 +16,8 @@ export default function PortfolioView() {
   const categories = ['All', 'Environmental Projects', 'AI Projects', 'Web Development', 'Research', 'Design Work'];
 
   const filteredProjects = activeCategory === 'All' 
-    ? PROJECTS_DATA 
-    : PROJECTS_DATA.filter(p => p.category === activeCategory);
+    ? projects 
+    : projects.filter(p => p.category === activeCategory);
 
   // Bind Escape key to exit modal
   useEffect(() => {
@@ -61,7 +62,7 @@ export default function PortfolioView() {
                     ? 'bg-zinc-900 text-white border-zinc-900' 
                     : 'bg-white text-black border-white' 
                   : isLight 
-                    ? 'bg-white border-zinc-200 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 shadow-xs' 
+                    ? 'bg-white border-zinc-200 text-zinc-650 hover:text-zinc-900 hover:bg-zinc-100 shadow-xs' 
                     : 'bg-white/5 border-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
               }`}
             >
@@ -102,7 +103,7 @@ export default function PortfolioView() {
                       className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-103"
                     />
                     <div className={`absolute inset-0 opacity-80 ${
-                      isLight ? 'bg-gradient-to-t from-white to-transparent' : 'bg-gradient-to-t from-[#121212] to-transparent'
+                      isLight ? 'bg-gradient-to-t from-white' : 'bg-gradient-to-t from-[#121212]'
                     }`} />
                     
                     {/* Floating top bar indicator */}
@@ -123,7 +124,7 @@ export default function PortfolioView() {
                       {project.title}
                     </h3>
                     <p className={`text-xs leading-relaxed line-clamp-3 ${
-                      isLight ? 'text-zinc-600' : 'text-zinc-400'
+                      isLight ? 'text-zinc-650' : 'text-zinc-440'
                     }`}>
                       {project.description}
                     </p>
@@ -133,20 +134,20 @@ export default function PortfolioView() {
                 {/* Footer and Tags */}
                 <div className="p-6 pt-0">
                   <div className="flex flex-wrap gap-1.5 mb-6">
-                    {project.technologies.slice(0, 3).map((tech, idx) => (
+                    {(project.technologies || []).slice(0, 3).map((tech, idx) => (
                       <span 
                         key={idx} 
                         className={`font-mono text-[9px] px-2 py-0.5 rounded border ${
                           isLight 
-                            ? 'bg-zinc-50 border-zinc-200 text-zinc-600' 
+                            ? 'bg-zinc-50 border-zinc-200 text-zinc-620' 
                             : 'bg-white/5 text-zinc-400 border-white/5'
                         }`}
                       >
                         {tech}
                       </span>
                     ))}
-                    {project.technologies.length > 3 && (
-                      <span className={`font-mono text-[9px] self-center pl-1 ${isLight ? 'text-zinc-450 font-bold' : 'text-zinc-500'}`}>
+                    {project.technologies && project.technologies.length > 3 && (
+                      <span className={`font-mono text-[9px] self-center pl-1 ${isLight ? 'text-zinc-450' : 'text-zinc-500 font-bold'}`}>
                         +{project.technologies.length - 3}
                       </span>
                     )}
@@ -228,7 +229,7 @@ export default function PortfolioView() {
 
                   {/* Skills/Tags in modal */}
                   <div className="flex flex-wrap gap-2 mb-8">
-                    {selectedProject.technologies.map((tech) => (
+                    {(selectedProject.technologies || []).map((tech) => (
                       <span 
                         key={tech} 
                         className={`font-mono text-[10px] px-3 py-1 rounded-md border ${
@@ -243,7 +244,7 @@ export default function PortfolioView() {
                   </div>
 
                   {/* Summary brief */}
-                  <p className={`text-sm leading-relaxed mb-8 ${isLight ? 'text-zinc-750' : 'text-zinc-400'}`}>
+                  <p className={`text-sm leading-relaxed mb-8 ${isLight ? 'text-zinc-755' : 'text-zinc-400'}`}>
                     {selectedProject.description}
                   </p>
 

@@ -8,7 +8,9 @@ import ServicesView from './components/ServicesView';
 import PortfolioView from './components/PortfolioView';
 import ExperienceView from './components/ExperienceView';
 import ContactView from './components/ContactView';
+import AdminHubView from './components/AdminHubView';
 import { ThemeProvider, useTheme } from './ThemeContext';
+import { PortfolioDataProvider } from './PortfolioDataContext';
 
 function MainApp() {
   const [activePage, setActivePage] = useState<string>('home');
@@ -18,7 +20,7 @@ function MainApp() {
   useEffect(() => {
     const parseHash = () => {
       const hash = window.location.hash.replace('#/', '').replace('#', '');
-      const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'contact'];
+      const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'contact', 'admin-hub-ur'];
       if (hash && validPages.includes(hash)) {
         setActivePage(hash);
       } else {
@@ -53,6 +55,8 @@ function MainApp() {
         return <ExperienceView />;
       case 'contact':
         return <ContactView />;
+      case 'admin-hub-ur':
+        return <AdminHubView />;
       case 'home':
       default:
         return <HomeView onNavigate={handleNavigate} />;
@@ -60,6 +64,7 @@ function MainApp() {
   };
 
   const isLight = theme === 'light';
+  const showChrome = activePage !== 'admin-hub-ur';
 
   return (
     <div className={`min-h-screen transition-colors duration-500 flex flex-col justify-between relative ${
@@ -68,45 +73,47 @@ function MainApp() {
         : 'bg-[#0A0A0A] text-white selection:bg-[#00C853] selection:text-black'
     }`}>
       {/* Dynamic Header */}
-      <Header activePage={activePage} onNavigate={handleNavigate} />
+      {showChrome && <Header activePage={activePage} onNavigate={handleNavigate} />}
 
       {/* Modern Multi-page Navigation Indicator Dot Strip (Sidebar Dots from Professional Polish) */}
-      <div className={`fixed right-8 top-1/2 -translate-y-1/2 flex flex-col gap-4.5 hidden xl:flex z-45 backdrop-blur-xs px-3 py-5 rounded-full border transition-all ${
-        isLight 
-          ? 'bg-black/5 border-black/5 shadow-xs' 
-          : 'bg-[#000000]/40 border-white/5 shadow-2xl'
-      }`}>
-        {['home', 'about', 'services', 'portfolio', 'experience', 'contact'].map((page) => {
-          const isActive = activePage === page;
-          return (
-            <button
-              key={page}
-              onClick={() => handleNavigate(page)}
-              className="group relative flex items-center justify-center focus:outline-hidden cursor-pointer"
-              aria-label={`Navigate to ${page}`}
-            >
-              <span className={`absolute right-7 px-2 py-1 rounded border font-mono text-[9px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none select-none whitespace-nowrap shadow-2xl ${
-                isLight 
-                  ? 'bg-white border-zinc-200 text-[#006428]' 
-                  : 'bg-[#1A1A1A] border-white/10 text-[#00C853]'
-              }`}>
-                {page}
-              </span>
-              <div 
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  isActive 
-                    ? isLight
-                      ? 'bg-[#00C853] scale-135 shadow-[0_0_8px_rgba(0,200,83,0.5)]'
-                      : 'bg-[#00C853] scale-135 shadow-[0_0_8px_rgba(0,200,83,0.8)]' 
-                    : isLight
-                      ? 'bg-black/20 hover:bg-black/50 scale-100'
-                      : 'bg-white/20 hover:bg-white/50 scale-100'
-                }`}
-              />
-            </button>
-          );
-        })}
-      </div>
+      {showChrome && (
+        <div className={`fixed right-8 top-1/2 -translate-y-1/2 flex flex-col gap-4.5 hidden xl:flex z-45 backdrop-blur-xs px-3 py-5 rounded-full border transition-all ${
+          isLight 
+            ? 'bg-black/5 border-black/5 shadow-xs' 
+            : 'bg-[#000000]/40 border-white/5 shadow-2xl'
+        }`}>
+          {['home', 'about', 'services', 'portfolio', 'experience', 'contact'].map((page) => {
+            const isActive = activePage === page;
+            return (
+              <button
+                key={page}
+                onClick={() => handleNavigate(page)}
+                className="group relative flex items-center justify-center focus:outline-hidden cursor-pointer"
+                aria-label={`Navigate to ${page}`}
+              >
+                <span className={`absolute right-7 px-2 py-1 rounded border font-mono text-[9px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none select-none whitespace-nowrap shadow-2xl ${
+                  isLight 
+                    ? 'bg-white border-zinc-200 text-[#006428]' 
+                    : 'bg-[#1A1A1A] border-white/10 text-[#00C853]'
+                }`}>
+                  {page}
+                </span>
+                <div 
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    isActive 
+                      ? isLight
+                        ? 'bg-[#00C853] scale-135 shadow-[0_0_8px_rgba(0,200,83,0.5)]'
+                        : 'bg-[#00C853] scale-135 shadow-[0_0_8px_rgba(0,200,83,0.8)]' 
+                      : isLight
+                        ? 'bg-black/20 hover:bg-black/50 scale-100'
+                        : 'bg-white/20 hover:bg-white/50 scale-100'
+                  }`}
+                />
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Main Pages with AnimatePresence exit/entry transitions */}
       <main className="flex-grow max-w-7xl mx-auto w-full relative">
@@ -125,7 +132,7 @@ function MainApp() {
       </main>
 
       {/* Global Footer */}
-      <Footer onNavigate={handleNavigate} />
+      {showChrome && <Footer onNavigate={handleNavigate} />}
     </div>
   );
 }
@@ -133,7 +140,9 @@ function MainApp() {
 export default function App() {
   return (
     <ThemeProvider>
-      <MainApp />
+      <PortfolioDataProvider>
+        <MainApp />
+      </PortfolioDataProvider>
     </ThemeProvider>
   );
 }
