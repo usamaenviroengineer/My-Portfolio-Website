@@ -233,6 +233,13 @@ export default function AdminView() {
   // Save General configs
   const handleSaveHeroAbout = async () => {
     if (!heroForm) return;
+
+    // Required fields validation
+    if (!heroForm.fullName?.trim() || !heroForm.role?.trim() || !heroForm.tagline?.trim()) {
+      triggerStatus('Full Name, Professional Role, and Tagline are required fields.', 'error');
+      return;
+    }
+
     try {
       setActionLoading(true);
       const ok = await saveUserInfo(heroForm);
@@ -251,6 +258,13 @@ export default function AdminView() {
 
   const handleSaveSEO = async () => {
     if (!seoForm) return;
+
+    // Required fields validation
+    if (!seoForm.metaTitle?.trim() || !seoForm.metaDescription?.trim()) {
+      triggerStatus('Meta Title and Meta Description are required fields.', 'error');
+      return;
+    }
+
     try {
       setActionLoading(true);
       const ok = await saveSEOSettings(seoForm);
@@ -267,6 +281,29 @@ export default function AdminView() {
   };
 
   const handleSaveSkills = async () => {
+    if (!skillsForm || skillsForm.length === 0) {
+      triggerStatus('Skills matrix cannot be completely empty.', 'error');
+      return;
+    }
+
+    // Validate that categories are set
+    for (const group of skillsForm) {
+      if (!group.category?.trim()) {
+        triggerStatus('All skill groups must have a category name.', 'error');
+        return;
+      }
+      if (!group.skills || group.skills.length === 0) {
+        triggerStatus(`Skill group "${group.category}" must have at least one skill.`, 'error');
+        return;
+      }
+      for (const skill of group.skills) {
+        if (!skill.name?.trim()) {
+          triggerStatus('All skills must have a name.', 'error');
+          return;
+        }
+      }
+    }
+
     try {
       setActionLoading(true);
       const ok = await saveSkills(skillsForm);

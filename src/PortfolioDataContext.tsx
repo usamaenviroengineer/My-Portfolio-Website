@@ -112,9 +112,15 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
 
   // --- PORTFOLIO DUAL-SCHEMA UTILITY ENGINE ---
   const upsertConfigHelper = async (key: string, value: any): Promise<boolean> => {
-    if (!supabase) return true;
+    if (!supabase) {
+      console.warn('Supabase client is not initialized in upsertConfigHelper');
+      return true;
+    }
+    
+    console.log(`[Supabase Write] Upserting config key: "${key}"`);
+    
+    // 1. Try 'portfolio_configs' first (Standard schema)
     try {
-      // 1. Try 'portfolio_configs' first (Standard schema)
       const { error } = await supabase
         .from('portfolio_configs')
         .upsert({ 
@@ -123,28 +129,51 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
           updated_at: new Date().toISOString() 
         });
 
-      if (!error) return true;
+      if (!error) {
+        console.log(`[Supabase Write] Successfully saved key "${key}" to portfolio_configs`);
+        return true;
+      }
+      
+      console.warn(`[Supabase Write] Failed writing "${key}" to portfolio_configs: code=${error.code}, msg=${error.message}. Trying configs fallback...`);
+    } catch (err: any) {
+      console.warn(`[Supabase Write] Exception writing "${key}" to portfolio_configs. Trying configs fallback... Error:`, err);
+    }
 
-      // 2. Fallback to 'configs' table if portfolio_configs relation doesn't exist (error code 42P01)
-      if (error.code === '42P01') {
-        const { error: fallbackError } = await supabase
-          .from('configs')
-          .upsert({ 
-            key, 
-            value 
-          });
+    // 2. Try 'configs' fallback table
+    try {
+      // Try with key, value, and updated_at
+      const { error: fallbackError } = await supabase
+        .from('configs')
+        .upsert({ 
+          key, 
+          value,
+          updated_at: new Date().toISOString()
+        });
 
-        if (fallbackError) {
-          console.error(`Fallback 'configs' write transaction failed for key [${key}]:`, fallbackError);
-          return false;
-        }
+      if (!fallbackError) {
+        console.log(`[Supabase Write] Successfully saved key "${key}" to configs (with updated_at)`);
+        return true;
+      }
+      
+      // If it failed due to missing updated_at column, try just key and value
+      console.warn(`[Supabase Write] Fallback with updated_at failed for key "${key}": code=${fallbackError.code}, msg=${fallbackError.message}. Retrying without updated_at...`);
+      
+      const { error: simpleFallbackError } = await supabase
+        .from('configs')
+        .upsert({ 
+          key, 
+          value 
+        });
+
+      if (!simpleFallbackError) {
+        console.log(`[Supabase Write] Successfully saved key "${key}" to configs (without updated_at)`);
         return true;
       }
 
-      console.error(`Standard 'portfolio_configs' write query failed [${error.code}]:`, error.message, error.details);
+      console.error(`[Supabase Write Error] Both portfolio_configs and configs tables failed to save key "${key}":`, simpleFallbackError.message);
       return false;
-    } catch (err) {
-      console.error(`Critical exception in upsertConfigHelper for key [${key}]:`, err);
+    } catch (err: any) {
+      console.error(`[Supabase Write Exception] Critical exception saving key "${key}" to configs fallback:`, err);
       return false;
     }
   };  // Load configuration and dynamic tables from Supabase on init
@@ -651,254 +680,298 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
   const saveProjects = async (newProjects: Project[]): Promise<boolean> => {
     setProjects(newProjects);
     if (!supabase) return true;
+
+    console.log('[Supabase Projects] Attempting to save project list to database:', newProjects);
+
+    let tableSuccess = false;
+    let isTableMissing = false;
+
     try {
-      let tableSuccess = false;
-      try {
-        // Direct replace transaction mapping
-        const { error: deletionError } = await supabase
-          .from('projects')
-          .delete()
-          .neq('id', 'placeholder-uuid-unmatched');
+      // Direct replace transaction: first delete all projects, then insert new ones
+      const { error: deletionError } = await supabase
+        .from('projects')
+        .delete()
+        .neq('id', 'placeholder-uuid-unmatched');
 
-        if (!deletionError) {
-          if (newProjects.length === 0) {
-            tableSuccess = true;
-          } else {
-            // Map to correct standard snake_case schema columns
-            const itemsToInsert = newProjects.map((p, idx) => {
-              const cleanTech = Array.isArray(p.technologies)
-                ? p.technologies.map(t => String(t).trim()).filter(Boolean)
-                : [];
-
-              return {
-                id: p.id,
-                title: p.title || '',
-                description: p.description || '',
-                category: p.category || 'Web Development',
-                image_url: p.imageUrl || '',
-                technologies: cleanTech,
-                live_url: p.liveUrl || null,
-                github_url: p.githubUrl || null,
-                challenge: p.extendedDetails?.challenge || '',
-                solution: p.extendedDetails?.solution || '',
-                impact: p.extendedDetails?.impact || '',
-                created_at: new Date(Date.now() + idx * 1000).toISOString()
-              };
-            });
-
-            const { error: insertError } = await supabase
-              .from('projects')
-              .insert(itemsToInsert);
-
-            if (!insertError) {
-              tableSuccess = true;
-            } else {
-              console.warn('Projects standard snake_case write failed, trying camelCase fallback... Error:', insertError.message);
-
-              const fallbackItems = newProjects.map((p, idx) => ({
-                id: p.id,
-                title: p.title || '',
-                description: p.description || '',
-                category: p.category || 'Web Development',
-                imageUrl: p.imageUrl || '',
-                technologies: Array.isArray(p.technologies) ? p.technologies.filter(Boolean) : [],
-                liveUrl: p.liveUrl || null,
-                githubUrl: p.githubUrl || null,
-                extendedDetails: p.extendedDetails || null,
-                created_at: new Date(Date.now() + idx * 1000).toISOString()
-              }));
-
-              const { error: fallbackError } = await supabase
-                .from('projects')
-                .insert(fallbackItems);
-
-              if (!fallbackError) {
-                tableSuccess = true;
-              } else {
-                console.error('Both standard and fallback project saves failed:', fallbackError.message);
-              }
-            }
-          }
+      if (deletionError) {
+        if (deletionError.code === '42P01') {
+          isTableMissing = true;
+          console.warn('[Supabase Projects] Standard "projects" table is missing in database. Using fallback key-value configurations...');
         } else {
-          console.error('Projects deletion failed:', deletionError.message);
+          console.error('[Supabase Projects Error] Projects standard table deletion failed:', {
+            code: deletionError.code,
+            message: deletionError.message,
+            details: deletionError.details
+          });
+          return false;
         }
-      } catch (err) {
-        console.error('Dedicated projects table write exception:', err);
-      }
+      } else {
+        if (newProjects.length === 0) {
+          tableSuccess = true;
+        } else {
+          // Map to correct standard snake_case schema columns
+          const itemsToInsert = newProjects.map((p, idx) => {
+            const cleanTech = Array.isArray(p.technologies)
+              ? p.technologies.map(t => String(t).trim()).filter(Boolean)
+              : [];
 
-      // Constantly write map state as transparent configurations backup key
-      const configSuccess = await upsertConfigHelper('projects_data', newProjects);
-      return tableSuccess || configSuccess;
+            return {
+              id: p.id,
+              title: p.title || '',
+              description: p.description || '',
+              category: p.category || 'Web Development',
+              image_url: p.imageUrl || '',
+              technologies: cleanTech,
+              live_url: p.liveUrl || null,
+              github_url: p.githubUrl || null,
+              challenge: p.extendedDetails?.challenge || '',
+              solution: p.extendedDetails?.solution || '',
+              impact: p.extendedDetails?.impact || '',
+              created_at: new Date(Date.now() + idx * 1000).toISOString()
+            };
+          });
+
+          const { error: insertError } = await supabase
+            .from('projects')
+            .insert(itemsToInsert);
+
+          if (!insertError) {
+            tableSuccess = true;
+            console.log('[Supabase Projects] Successfully updated standard "projects" table.');
+          } else {
+            console.error('[Supabase Projects Error] Projects standard table insert failed:', {
+              code: insertError.code,
+              message: insertError.message,
+              details: insertError.details
+            });
+            return false;
+          }
+        }
+      }
     } catch (err) {
-      console.error('Critical project transaction exception:', err);
+      console.error('[Supabase Projects Exception] Critical projects write transaction error:', err);
       return false;
     }
+
+    const configSuccess = await upsertConfigHelper('projects_data', newProjects);
+
+    if (isTableMissing) {
+      return configSuccess;
+    }
+
+    return tableSuccess && configSuccess;
   };
 
   const saveServices = async (newServices: Service[]): Promise<boolean> => {
     setServices(newServices);
     if (!supabase) return true;
+
+    console.log('[Supabase Services] Attempting to save services list to database:', newServices);
+
+    let tableSuccess = false;
+    let isTableMissing = false;
+
     try {
-      let tableSuccess = false;
-      try {
-        const { error: deletionError } = await supabase
-          .from('services')
-          .delete()
-          .neq('id', 'placeholder-uuid-unmatched');
+      const { error: deletionError } = await supabase
+        .from('services')
+        .delete()
+        .neq('id', 'placeholder-uuid-unmatched');
 
-        if (!deletionError) {
-          if (newServices.length === 0) {
-            tableSuccess = true;
-          } else {
-            // Sanitize bullets TEXT[] formatting
-            const itemsToInsert = newServices.map((s, idx) => {
-              const cleanBullets = Array.isArray(s.bullets)
-                ? s.bullets.map(b => String(b).trim()).filter(Boolean)
-                : [];
-
-              return {
-                id: s.id,
-                title: s.title || '',
-                description: s.description || '',
-                bullets: cleanBullets,
-                icon_name: s.iconName || 'Code',
-                category: s.category || 'core',
-                created_at: new Date(Date.now() + idx * 1000).toISOString()
-              };
-            });
-
-            const { error: insertError } = await supabase
-              .from('services')
-              .insert(itemsToInsert);
-
-            if (!insertError) {
-              tableSuccess = true;
-            } else {
-              console.warn('Services standard snake_case write failed, trying camelCase fallback... Error:', insertError.message);
-
-              const fallbackItems = newServices.map((s, idx) => ({
-                id: s.id,
-                title: s.title || '',
-                description: s.description || '',
-                bullets: Array.isArray(s.bullets) ? s.bullets.filter(Boolean) : [],
-                iconName: s.iconName || 'Code',
-                category: s.category || 'core',
-                created_at: new Date(Date.now() + idx * 1000).toISOString()
-              }));
-
-              const { error: fallbackError } = await supabase
-                .from('services')
-                .insert(fallbackItems);
-
-              if (!fallbackError) {
-                tableSuccess = true;
-              } else {
-                console.error('Both standard and fallback service saves failed:', fallbackError.message);
-              }
-            }
-          }
+      if (deletionError) {
+        if (deletionError.code === '42P01') {
+          isTableMissing = true;
+          console.warn('[Supabase Services] Standard "services" table is missing in database. Using fallback key-value configurations...');
         } else {
-          console.error('Services deletion failed:', deletionError.message);
+          console.error('[Supabase Services Error] Services standard table deletion failed:', {
+            code: deletionError.code,
+            message: deletionError.message,
+            details: deletionError.details
+          });
+          return false;
         }
-      } catch (err) {
-        console.error('Dedicated services table write exception:', err);
-      }
+      } else {
+        if (newServices.length === 0) {
+          tableSuccess = true;
+        } else {
+          // Sanitize bullets TEXT[] formatting
+          const itemsToInsert = newServices.map((s, idx) => {
+            const cleanBullets = Array.isArray(s.bullets)
+              ? s.bullets.map(b => String(b).trim()).filter(Boolean)
+              : [];
 
-      const configSuccess = await upsertConfigHelper('services_data', newServices);
-      return tableSuccess || configSuccess;
+            return {
+              id: s.id,
+              title: s.title || '',
+              description: s.description || '',
+              bullets: cleanBullets,
+              icon_name: s.iconName || 'Code',
+              category: s.category || 'core',
+              created_at: new Date(Date.now() + idx * 1000).toISOString()
+            };
+          });
+
+          const { error: insertError } = await supabase
+            .from('services')
+            .insert(itemsToInsert);
+
+          if (!insertError) {
+            tableSuccess = true;
+            console.log('[Supabase Services] Successfully updated standard "services" table.');
+          } else {
+            console.error('[Supabase Services Error] Services standard table insert failed:', {
+              code: insertError.code,
+              message: insertError.message,
+              details: insertError.details
+            });
+            return false;
+          }
+        }
+      }
     } catch (err) {
-      console.error('Critical service transaction exception:', err);
+      console.error('[Supabase Services Exception] Critical services write transaction error:', err);
       return false;
     }
+
+    const configSuccess = await upsertConfigHelper('services_data', newServices);
+
+    if (isTableMissing) {
+      return configSuccess;
+    }
+
+    return tableSuccess && configSuccess;
   };
 
   const saveTimeline = async (newTimeline: TimelineEvent[]): Promise<boolean> => {
     setTimeline(newTimeline);
     if (!supabase) return true;
+
+    console.log('[Supabase Timeline] Attempting to save timeline milestones:', newTimeline);
+
+    let tableSuccess = false;
+    let isTimelineEventsMissing = false;
+    let isTimelineFallbackMissing = false;
+
     try {
-      let tableSuccess = false;
+      // 1. Try 'timeline_events' first (Standard matching schema)
+      const { error: deletionEventsError } = await supabase
+        .from('timeline_events')
+        .delete()
+        .neq('id', 'placeholder-uuid-unmatched');
+
+      if (deletionEventsError) {
+        if (deletionEventsError.code === '42P01') {
+          isTimelineEventsMissing = true;
+          console.warn('[Supabase Timeline] Standard "timeline_events" table is missing in database. Trying "timeline" fallback...');
+        } else {
+          console.error('[Supabase Timeline Error] timeline_events standard table deletion failed:', {
+            code: deletionEventsError.code,
+            message: deletionEventsError.message,
+            details: deletionEventsError.details
+          });
+          return false;
+        }
+      } else {
+        if (newTimeline.length === 0) {
+          tableSuccess = true;
+        } else {
+          const timelineEventsFormatted = newTimeline.map((t, idx) => ({
+            id: t.id,
+            year: t.duration || '',
+            title: t.role || '',
+            company: t.company || '',
+            description: Array.isArray(t.description) ? JSON.stringify(t.description) : (t.description || ''),
+            category: t.category || 'professional',
+            created_at: new Date(Date.now() + idx * 1000).toISOString()
+          }));
+
+          const { error: insertEventsError } = await supabase
+            .from('timeline_events')
+            .insert(timelineEventsFormatted);
+
+          if (!insertEventsError) {
+            tableSuccess = true;
+            console.log('[Supabase Timeline] Successfully updated standard "timeline_events" table.');
+          } else {
+            console.error('[Supabase Timeline Error] timeline_events standard table insert failed:', {
+              code: insertEventsError.code,
+              message: insertEventsError.message,
+              details: insertEventsError.details
+            });
+            return false;
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[Supabase Timeline Exception] Critical standard timeline write error:', err);
+      return false;
+    }
+
+    // 2. Try 'timeline' layout fallback if and only if 'timeline_events' is missing
+    if (isTimelineEventsMissing) {
       try {
-        // 1. Try 'timeline_events' first (Mapped with schema properties)
-        const { error: deletionEventsError } = await supabase
-          .from('timeline_events')
+        const { error: deletionTimelineError } = await supabase
+          .from('timeline')
           .delete()
           .neq('id', 'placeholder-uuid-unmatched');
 
-        if (!deletionEventsError) {
+        if (deletionTimelineError) {
+          if (deletionTimelineError.code === '42P01') {
+            isTimelineFallbackMissing = true;
+            console.warn('[Supabase Timeline] Alternative fallback table "timeline" is also missing in your database.');
+          } else {
+            console.error('[Supabase Timeline Error] fallback timeline table deletion failed:', {
+              code: deletionTimelineError.code,
+              message: deletionTimelineError.message,
+              details: deletionTimelineError.details
+            });
+            return false;
+          }
+        } else {
           if (newTimeline.length === 0) {
             tableSuccess = true;
           } else {
-            let timelineEventsFormatted = newTimeline.map((t, idx) => ({
+            const itemsToInsertTimeline = newTimeline.map((t, idx) => ({
               id: t.id,
-              year: t.duration || '',
-              title: t.role || '',
+              role: t.role || '',
               company: t.company || '',
-              description: Array.isArray(t.description) ? JSON.stringify(t.description) : (t.description || ''),
+              location: t.location || '',
+              duration: t.duration || '',
+              description: Array.isArray(t.description) ? t.description.map(x => String(x).trim()).filter(Boolean) : [],
+              skills: Array.isArray(t.skills) ? t.skills.map(x => String(x).trim()).filter(Boolean) : [],
               category: t.category || 'professional',
               created_at: new Date(Date.now() + idx * 1000).toISOString()
             }));
 
-            const { error: insertEventsError } = await supabase
-              .from('timeline_events')
-              .insert(timelineEventsFormatted);
+            const { error: insertTimelineError } = await supabase
+              .from('timeline')
+              .insert(itemsToInsertTimeline);
 
-            if (!insertEventsError) {
+            if (!insertTimelineError) {
               tableSuccess = true;
+              console.log('[Supabase Timeline] Successfully updated alternative fallback timeline table.');
             } else {
-              console.warn('Failed timeline_events writing, trying backup table options:', insertEventsError.message);
+              console.error('[Supabase Timeline Error] Fallback "timeline" table insert failed:', {
+                code: insertTimelineError.code,
+                message: insertTimelineError.message,
+                details: insertTimelineError.details
+              });
+              return false;
             }
           }
         }
       } catch (err) {
-        console.error('timeline_events table write exception:', err);
+        console.error('[Supabase Timeline Exception] Critical fallback timeline write error:', err);
+        return false;
       }
-
-      if (!tableSuccess) {
-        try {
-          // 2. Fallback table layout: 'timeline'
-          const { error: deletionTimelineError } = await supabase
-            .from('timeline')
-            .delete()
-            .neq('id', 'placeholder-uuid-unmatched');
-
-          if (!deletionTimelineError) {
-            if (newTimeline.length === 0) {
-              tableSuccess = true;
-            } else {
-              const itemsToInsertTimeline = newTimeline.map((t, idx) => ({
-                id: t.id,
-                role: t.role || '',
-                company: t.company || '',
-                location: t.location || '',
-                duration: t.duration || '',
-                description: Array.isArray(t.description) ? t.description.map(x => String(x).trim()).filter(Boolean) : [],
-                skills: Array.isArray(t.skills) ? t.skills.map(x => String(x).trim()).filter(Boolean) : [],
-                category: t.category || 'professional',
-                created_at: new Date(Date.now() + idx * 1000).toISOString()
-              }));
-
-              const { error: insertTimelineError } = await supabase
-                .from('timeline')
-                .insert(itemsToInsertTimeline);
-
-              if (!insertTimelineError) {
-                tableSuccess = true;
-              } else {
-                console.error('Timeline table fallback insert failed:', insertTimelineError.message);
-              }
-            }
-          }
-        } catch (err) {
-          console.error('Dedicated timeline table write exception:', err);
-        }
-      }
-
-      const configSuccess = await upsertConfigHelper('timeline_data', newTimeline);
-      return tableSuccess || configSuccess;
-    } catch (err) {
-      console.error('Critical timeline transaction exception:', err);
-      return false;
     }
+
+    const configSuccess = await upsertConfigHelper('timeline_data', newTimeline);
+
+    if (isTimelineEventsMissing && isTimelineFallbackMissing) {
+      return configSuccess;
+    }
+
+    return tableSuccess && configSuccess;
   };
 
   // --- SEED UTILITY (Allows a user to push default local data to their fresh Supabase db automatically) ---
@@ -906,6 +979,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
     if (!supabase) return false;
     try {
       setLoading(true);
+      console.log('[Supabase Seed] Commencing comprehensive seed database initialize procedure...');
 
       // 1. Seed general configs using self-healing helper
       const seoData = {
@@ -926,9 +1000,26 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       const okServ = await saveServices(SERVICES_DATA);
       const okTime = await saveTimeline(TIMELINE_DATA);
 
-      // Seed is successful as long as we seeded the core configuration tables successfully
+      // Double check all statuses securely to prevent masking errors or false successes
       const configsOk = okConf1 && okConf2 && okConf3 && okConf4 && okConf5;
-      
+      const allSuccess = configsOk && okProj && okServ && okTime;
+
+      if (allSuccess) {
+        console.log('[Supabase Seed] Database seeding perfectly complete!');
+      } else {
+        console.error('[Supabase Seed Error] Seeding transaction failed for one or multiple components:', {
+          configsOk,
+          user_info: okConf1,
+          reasons: okConf2,
+          fun_facts: okConf3,
+          skills: okConf4,
+          seo: okConf5,
+          projects_table: okProj,
+          services_table: okServ,
+          timeline_table: okTime
+        });
+      }
+
       // Update local state for real-time reactivity
       setUserInfo(USER_INFO);
       setReasons(CLIENT_REASONS);
@@ -940,9 +1031,9 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       setSeoSettings(seoData);
 
       setDbConnected(true);
-      return configsOk;
+      return allSuccess;
     } catch (err) {
-      console.error('Failed to seed Supabase database completely:', err);
+      console.error('[Supabase Seed Critical Error] Seeding crashed completely:', err);
       return false;
     } finally {
       setLoading(false);
