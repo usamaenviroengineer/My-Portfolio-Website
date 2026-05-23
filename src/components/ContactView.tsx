@@ -6,7 +6,7 @@ import BrandedImage from './BrandedImage';
 import { Mail, MapPin, Send, CheckCircle, Clock } from 'lucide-react';
 
 export default function ContactView() {
-  const { userInfo } = usePortfolioData();
+  const { userInfo, addContactMessage } = usePortfolioData();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -21,34 +21,38 @@ export default function ContactView() {
 
   const isLight = theme === 'light';
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) return;
 
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    // Completely client-side simulated logging and SLA registration
-    setTimeout(() => {
-      console.log("[Simulation Contact Logged] Spec Packets Dispatch Completed. Ready for incoming queues.");
-      console.log("Client payload:", {
-        name: formData.name,
-        email: formData.email,
+    try {
+      const success = await addContactMessage({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
         subject: formData.service,
-        message: formData.message,
-        timestamp: new Date().toISOString()
+        message: formData.message.trim()
       });
-      setIsSuccess(true);
+
+      if (success) {
+        setIsSuccess(true);
+        setFormData({
+          name: '',
+          email: '',
+          service: 'AI Solutions & Web Dev',
+          message: ''
+        });
+      } else {
+        setErrorMessage("Unable to dispatch your specification packet. Please check your network connection and retry.");
+      }
+    } catch (err: any) {
+      console.error("Submission error:", err);
+      setErrorMessage(err?.message || "An exception occurred during telemetry dispatch.");
+    } finally {
       setIsSubmitting(false);
-      
-      // Clear form inputs
-      setFormData({
-        name: '',
-        email: '',
-        service: 'AI Solutions & Web Dev',
-        message: ''
-      });
-    }, 600);
+    }
   };
 
   const handleTextChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

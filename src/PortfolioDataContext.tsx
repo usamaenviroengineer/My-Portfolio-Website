@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Project, Service, TimelineEvent, SkillGroup } from './types';
+import { Project, Service, TimelineEvent, SkillGroup, ContactMessage } from './types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { 
   USER_INFO, 
@@ -29,6 +29,13 @@ interface PortfolioDataContextType {
   seoSettings: SEOSettings;
   loading: boolean;
   dbConnected: boolean;
+  
+  // Contact Form Messages state
+  contactMessages: ContactMessage[];
+  addContactMessage: (data: Omit<ContactMessage, 'id' | 'created_at' | 'read'>) => Promise<boolean>;
+  deleteContactMessage: (id: string) => Promise<boolean>;
+  toggleReadMessage: (id: string) => Promise<boolean>;
+  loadContactMessages: () => Promise<void>;
   
   // CMS update hooks (Real-time and Direct Database Persistence)
   saveUserInfo: (data: typeof USER_INFO) => Promise<boolean>;
@@ -63,6 +70,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
   
   const [loading, setLoading] = useState<boolean>(isSupabaseConfigured);
   const [dbConnected, setDbConnected] = useState<boolean>(false);
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
 
   // Apply SEO tags to the browser document dynamically (instant validation of save)
   useEffect(() => {
@@ -416,6 +424,37 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
           setTimeline(mappedConfigs.timeline_data);
         }
 
+        // B4. Load Contact Messages
+        let loadedMessages: ContactMessage[] = [];
+        try {
+          const { data: rawMessages, error: messagesError } = await supabase
+            .from('contact_messages')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (!messagesError && rawMessages) {
+            loadedMessages = rawMessages.map((m: any) => ({
+              id: m.id,
+              name: m.name || '',
+              email: m.email || '',
+              subject: m.subject || m.service || 'Inquiry',
+              message: m.message || '',
+              created_at: m.created_at || new Date().toISOString(),
+              read: m.read === true
+            }));
+          }
+        } catch (err) {
+          console.error("Dedicated contact messages load error:", err);
+        }
+
+        if (loadedMessages.length > 0) {
+          setContactMessages(loadedMessages);
+        } else if (mappedConfigs.contact_messages) {
+          const mList = Array.isArray(mappedConfigs.contact_messages) ? mappedConfigs.contact_messages : [];
+          const sorted = [...mList].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          setContactMessages(sorted);
+        }
+
       } catch (err) {
         console.error('Error connecting with Supabase database:', err);
       } finally {
@@ -461,6 +500,162 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
   const saveSEOSettings = async (data: SEOSettings): Promise<boolean> => {
     setSeoSettings(data);
     return await upsertConfigHelper('seo_data', data);
+  };
+
+  const loadContactMessages = async () => {
+    if (!supabase) return;
+    try {
+      const { data: rawMessages, error: messagesError } = await supabase
+        .from('contact_messages')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!messagesError && rawMessages) {
+        const loaded = rawMessages.map((m: any) => ({
+          id: m.id,
+          name: m.name || '',
+          email: m.email || '',
+          subject: m.subject || m.service || 'Inquiry',
+          message: m.message || '',
+          created_at: m.created_at || new Date().toISOString(),
+          read: m.read === true
+        }));
+        setContactMessages(loaded);
+        return;
+      }
+
+      // Retry/fallback on key/value storage if relation does not exist
+      let configData = null;
+      const res = await supabase.from('portfolio_configs').select('*').eq('key', 'contact_messages').single();
+      if (res.data) {
+        configData = res.data;
+      } else {
+        const resFallback = await supabase.from('configs').select('*').eq('key', 'contact_messages').single();
+        configData = resFallback.data;
+      }
+
+      if (configData && configData.value) {
+        const messages = Array.isArray(configData.value) ? configData.value : [];
+        const sorted = [...messages].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        setContactMessages(sorted);
+      }
+    } catch (err) {
+      console.error('Error reloading contact messages:', err);
+    }
+  };
+
+  const addContactMessage = async (msg: Omit<ContactMessage, 'id' | 'created_at' | 'read'>): Promise<boolean> => {
+    const newMessage: ContactMessage = {
+      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + '-' + Date.now(),
+      name: msg.name,
+      email: msg.email,
+      subject: msg.subject,
+      message: msg.message,
+      created_at: new Date().toISOString(),
+      read: false
+    };
+
+    setContactMessages(prev => [newMessage, ...prev]);
+
+    if (!supabase) return true;
+
+    try {
+      const { error } = await supabase
+        .from('contact_messages')
+        .insert({
+          id: newMessage.id,
+          name: newMessage.name,
+          email: newMessage.email,
+          subject: newMessage.subject,
+          message: newMessage.message,
+          created_at: newMessage.created_at,
+          read: newMessage.read
+        });
+
+      if (!error) {
+        // Keep config-backup in-sync too!
+        const updatedBackup = [newMessage, ...contactMessages];
+        await upsertConfigHelper('contact_messages', updatedBackup);
+        return true;
+      }
+
+      if (error.code === '42P01') {
+        const updatedBackup = [newMessage, ...contactMessages];
+        return await upsertConfigHelper('contact_messages', updatedBackup);
+      }
+
+      console.error('Failed to save message to db:', error.message);
+      return false;
+    } catch (err) {
+      console.error('Critical write contact message error:', err);
+      return false;
+    }
+  };
+
+  const deleteContactMessage = async (id: string): Promise<boolean> => {
+    const finalMessages = contactMessages.filter(m => m.id !== id);
+    setContactMessages(finalMessages);
+
+    if (!supabase) return true;
+
+    try {
+      const { error } = await supabase
+        .from('contact_messages')
+        .delete()
+        .eq('id', id);
+
+      if (!error) {
+        await upsertConfigHelper('contact_messages', finalMessages);
+        return true;
+      }
+
+      if (error.code === '42P01') {
+        return await upsertConfigHelper('contact_messages', finalMessages);
+      }
+
+      console.error('Failed to delete message from db:', error.message);
+      return false;
+    } catch (err) {
+      console.error('Critical delete contact message error:', err);
+      return false;
+    }
+  };
+
+  const toggleReadMessage = async (id: string): Promise<boolean> => {
+    let nextRead = false;
+    const updatedMessages = contactMessages.map(m => {
+      if (m.id === id) {
+        nextRead = !m.read;
+        return { ...m, read: nextRead };
+      }
+      return m;
+    });
+
+    setContactMessages(updatedMessages);
+
+    if (!supabase) return true;
+
+    try {
+      const { error } = await supabase
+        .from('contact_messages')
+        .update({ read: nextRead })
+        .eq('id', id);
+
+      if (!error) {
+        await upsertConfigHelper('contact_messages', updatedMessages);
+        return true;
+      }
+
+      if (error.code === '42P01') {
+        return await upsertConfigHelper('contact_messages', updatedMessages);
+      }
+
+      console.error('Failed to update message status:', error.message);
+      return false;
+    } catch (err) {
+      console.error('Critical toggle status contact message error:', err);
+      return false;
+    }
   };
 
   const saveProjects = async (newProjects: Project[]): Promise<boolean> => {
@@ -776,6 +971,11 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       seoSettings,
       loading,
       dbConnected,
+      contactMessages,
+      addContactMessage,
+      deleteContactMessage,
+      toggleReadMessage,
+      loadContactMessages,
       saveUserInfo,
       saveProjects,
       saveServices,

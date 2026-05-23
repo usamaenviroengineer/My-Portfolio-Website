@@ -38,3 +38,14 @@ export interface SkillGroup {
   category: string;
   skills: { name: string; percentage: number }[];
 }
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  created_at: string;
+  read: boolean;
+}
+

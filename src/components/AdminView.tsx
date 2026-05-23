@@ -48,6 +48,10 @@ export default function AdminView() {
     seoSettings,
     loading: dataLoading,
     dbConnected,
+    contactMessages,
+    deleteContactMessage,
+    toggleReadMessage,
+    loadContactMessages,
     saveUserInfo,
     saveProjects,
     saveServices,
@@ -85,6 +89,9 @@ export default function AdminView() {
   const [editingProject, setEditingProject] = useState<Partial<Project> | null>(null);
   const [editingService, setEditingService] = useState<Partial<Service> | null>(null);
   const [editingTimeline, setEditingTimeline] = useState<Partial<TimelineEvent> | null>(null);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [messagesFilter, setMessagesFilter] = useState<'all' | 'unread' | 'read'>('all');
+  const [messagesSearch, setMessagesSearch] = useState<string>('');
 
   // Image Upload Substates
   const [uploadLoading, setUploadLoading] = useState<string | null>(null); // tracks fields uploading like 'hero', 'about', or project-id
@@ -130,6 +137,13 @@ export default function AdminView() {
       setFunFactsForm(JSON.parse(JSON.stringify(funFacts)));
     }
   }, [userInfo, seoSettings, skills, reasons, funFacts, activeTab]);
+
+  // Sync messages when Messages activeTab is visited
+  useEffect(() => {
+    if (activeTab === 'messages') {
+      loadContactMessages();
+    }
+  }, [activeTab]);
 
   // Auth Submit Action handler
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -689,9 +703,12 @@ export default function AdminView() {
                 { id: 'timeline', label: 'Career Timeline', icon: Briefcase },
                 { id: 'skills', label: 'Expertise Skills', icon: Sliders },
                 { id: 'seo', label: 'SEO & Meta Core', icon: Globe },
+                { id: 'messages', label: 'Messages', icon: Mail },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
+                const showBadge = tab.id === 'messages' && contactMessages.some(m => !m.read);
+                const count = contactMessages.filter(m => !m.read).length;
                 return (
                   <button
                     key={tab.id}
@@ -701,14 +718,21 @@ export default function AdminView() {
                       setEditingService(null);
                       setEditingTimeline(null);
                     }}
-                    className={`w-full text-left font-sans text-xs font-semibold tracking-wide py-3 px-3.5 rounded-xl cursor-pointer flex items-center gap-3 transition-all ${
+                    className={`w-full text-left font-sans text-xs font-semibold tracking-wide py-3 px-3.5 rounded-xl cursor-pointer flex items-center justify-between transition-all ${
                       isActive 
                         ? 'bg-[#00C853]/15 border border-[#00C853]/20 text-[#00C853] shadow-[0_0_12px_rgba(0,200,83,0.05)]' 
                         : 'border border-transparent text-zinc-400 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#00C853]' : 'text-zinc-500'}`} />
-                    {tab.label}
+                    <div className="flex items-center gap-3">
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#00C853]' : 'text-zinc-500'}`} />
+                      <span>{tab.label}</span>
+                    </div>
+                    {showBadge && (
+                      <span className="bg-red-500/90 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 animate-pulse">
+                        {count}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -775,11 +799,15 @@ export default function AdminView() {
                       <div className="mt-4 flex gap-4.5">
                         <div className="text-center bg-black/30 border border-white/5 py-2 px-4 rounded-lg flex-1">
                           <p className="font-sans font-medium text-base text-zinc-200">{projects.length}</p>
-                          <p className="font-mono text-[8px] uppercase tracking-wider text-zinc-500 mt-0.5">Projects Loaded</p>
+                          <p className="font-mono text-[8px] uppercase tracking-wider text-zinc-400 mt-0.5">Projects</p>
                         </div>
                         <div className="text-center bg-black/30 border border-white/5 py-2 px-4 rounded-lg flex-1">
                           <p className="font-sans font-medium text-base text-zinc-200">{services.length}</p>
-                          <p className="font-mono text-[8px] uppercase tracking-wider text-zinc-500 mt-0.5">Services Loaded</p>
+                          <p className="font-mono text-[8px] uppercase tracking-wider text-zinc-400 mt-0.5">Services</p>
+                        </div>
+                        <div className="text-center bg-black/30 border border-white/5 py-2 px-4 rounded-lg flex-1">
+                          <p className="font-sans font-medium text-base text-zinc-200">{contactMessages.length}</p>
+                          <p className="font-mono text-[8px] uppercase tracking-wider text-zinc-400 mt-0.5">Inbox</p>
                         </div>
                       </div>
                     </div>
@@ -788,7 +816,7 @@ export default function AdminView() {
                       <div>
                         <h3 className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest mb-1.5">Default Fallback Logic</h3>
                         <p className="text-xs text-zinc-400 leading-relaxed">
-                          If your tables are empty or tables are missing, the website automatically loads static presets from `src/data.ts` to ensure 100% runtime safety.
+                          If your tables are empty or tables are missing, the website automatically loads static presets from `src/data.ts` and uses standard key-value system profiles to ensure 100% runtime safety.
                         </p>
                       </div>
                       <div className="mt-4 p-3 bg-zinc-950/40 border border-[#00C853]/15 text-[#00C853] text-[10px] font-mono uppercase tracking-widest rounded-lg flex items-center gap-2">
@@ -807,7 +835,7 @@ export default function AdminView() {
 
                     <div className="bg-[#141418] border border-white/5 rounded-xl p-5 space-y-4 leading-relaxed font-sans text-xs text-zinc-400">
                       <p>
-                        To enable fully operational admin dashboards with real-time editing, execute SQL definitions directly in your Supabase project under the <strong className="text-white">SQL Editor</strong> panel. This will generate your databases instantly.
+                        To enable fully operational admin dashboards with real-time message feeds from client submissions, paste and execute the SQL query directly under the <strong className="text-white">SQL Editor</strong> section of your Supabase project.
                       </p>
 
                       <div className="space-y-3">
@@ -858,22 +886,39 @@ CREATE TABLE IF NOT EXISTS timeline (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- E. Enable public read rights for easy static delivery (optional bypasses API rules)
+-- E. Clients Contact Form messages table
+CREATE TABLE IF NOT EXISTS contact_messages (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    subject TEXT,
+    message TEXT NOT NULL,
+    read BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- F. Enable Row Level Security (RLS) on all tables (Securing databases)
 ALTER TABLE configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE timeline ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
 
+-- G. Allow public select / read operations where applicable (Static public details)
 CREATE POLICY "Allow public read configs" ON configs FOR SELECT USING (true);
 CREATE POLICY "Allow public read projects" ON projects FOR SELECT USING (true);
 CREATE POLICY "Allow public read services" ON services FOR SELECT USING (true);
 CREATE POLICY "Allow public read timeline" ON timeline FOR SELECT USING (true);
 
--- F. Allow authenticated admins full write accessibility (RLS auth templates)
+-- H. Allow clients the ability to insert messages through the contact form
+CREATE POLICY "Allow public insert contact_messages" ON contact_messages FOR INSERT WITH CHECK (true);
+
+-- I. Allow authenticated admins full control over all sections
 CREATE POLICY "Allow authenticated full control configs" ON configs FOR ALL TO authenticated USING (true);
 CREATE POLICY "Allow authenticated full control projects" ON projects FOR ALL TO authenticated USING (true);
 CREATE POLICY "Allow authenticated full control services" ON services FOR ALL TO authenticated USING (true);
 CREATE POLICY "Allow authenticated full control timeline" ON timeline FOR ALL TO authenticated USING (true);
+CREATE POLICY "Allow authenticated full control contact_messages" ON contact_messages FOR ALL TO authenticated USING (true);
 `}
                         </div>
                       </div>
@@ -1942,6 +1987,225 @@ CREATE POLICY "Allow authenticated full control timeline" ON timeline FOR ALL TO
                       />
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* 8. Messages panel */}
+              {activeTab === 'messages' && (
+                <div className="bg-[#0D0D10]/80 border border-white/5 rounded-2xl p-6.5 space-y-6">
+                  {/* Messages Section Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/5 pb-4 gap-4">
+                    <div>
+                      <h2 className="font-sans font-medium text-base text-white uppercase tracking-wider flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-[#00C853]" /> Client Inquiry Feed
+                      </h2>
+                      <p className="font-sans text-xs text-zinc-500 mt-1">Review, flag, or reply to specifications sent through the contact form.</p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        onClick={async () => {
+                          setActionLoading(true);
+                          await loadContactMessages();
+                          setActionLoading(false);
+                        }}
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-semibold rounded-lg uppercase tracking-wider duration-300 transition-all flex items-center gap-2 cursor-pointer"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${actionLoading ? 'animate-spin' : ''}`} />
+                        Sync Mailbox
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Messages Search and Filter Controls */}
+                  <div className="flex flex-col md:flex-row gap-3">
+                    <div className="flex-1 relative">
+                      <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
+                        <Search className="w-3.5 h-3.5" />
+                      </span>
+                      <input
+                        type="text"
+                        value={messagesSearch}
+                        onChange={(e) => setMessagesSearch(e.target.value)}
+                        className="w-full bg-[#141418] border border-white/5 pl-10 pr-4 py-3 rounded-xl text-xs text-white placeholder-zinc-500 transition-colors focus:border-[#00C853]/50 focus:bg-zinc-900/60 font-sans leading-relaxed outline-none"
+                        placeholder="Search messages by name, email, or keywords..."
+                      />
+                    </div>
+                    <div className="flex gap-1.5 shrink-0 bg-black/40 border border-white/5 p-1 rounded-xl">
+                      {(['all', 'unread', 'read'] as const).map((opt) => (
+                        <button
+                          key={opt}
+                          onClick={() => setMessagesFilter(opt)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-sans capitalize transition-all cursor-pointer ${
+                            messagesFilter === opt
+                              ? 'bg-[#00C853]/15 text-[#00C853] border border-[#00C853]/20'
+                              : 'text-zinc-500 hover:text-white border border-transparent'
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Dual Grid Layout for Message List and Message Detail */}
+                  {contactMessages.length === 0 ? (
+                    <div className="border border-dashed border-white/5 bg-[#121215]/20 rounded-2xl py-16 px-4 text-center max-w-xl mx-auto space-y-4">
+                      <div className="w-12 h-12 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center mx-auto text-zinc-500">
+                        <Mail className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-sans font-medium text-zinc-300 text-xs uppercase tracking-wider">No specification logs found</h4>
+                        <p className="font-sans text-xs text-zinc-500 mt-2 leading-relaxed">
+                          Your client communication channel is completely calibrated. When someone submits an inquiry on the front page, it will sync here.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    (() => {
+                      // Filter messages logic
+                      const filtered = contactMessages.filter(msg => {
+                        const matchesFilter = 
+                          messagesFilter === 'all' 
+                            || (messagesFilter === 'unread' && !msg.read)
+                            || (messagesFilter === 'read' && msg.read);
+
+                        const text = `${msg.name} ${msg.email} ${msg.subject} ${msg.message}`.toLowerCase();
+                        const matchesSearch = text.includes(messagesSearch.toLowerCase());
+
+                        return matchesFilter && matchesSearch;
+                      });
+
+                      const selectedMsg = filtered.find(m => m.id === selectedMessageId) || filtered[0];
+
+                      return (
+                        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                          {/* Messages Left Master Selection Stream */}
+                          <div className="lg:col-span-2 space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                            {filtered.length === 0 ? (
+                              <div className="text-center py-12 text-zinc-500 font-sans text-xs">
+                                No messages matched your filters.
+                              </div>
+                            ) : (
+                              filtered.map((msg) => {
+                                const isSelected = selectedMsg?.id === msg.id;
+                                const dateStr = new Date(msg.created_at).toLocaleString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                });
+
+                                return (
+                                  <div
+                                    key={msg.id}
+                                    onClick={() => {
+                                      setSelectedMessageId(msg.id);
+                                      if (!msg.read) {
+                                        // Auto mark as read on click
+                                        toggleReadMessage(msg.id);
+                                      }
+                                    }}
+                                    className={`p-3.5 rounded-xl cursor-pointer duration-200 border transition-all text-left flex justify-between gap-3 ${
+                                      isSelected
+                                        ? 'bg-[#00C853]/10 border-[#00C853]/30 text-white'
+                                        : 'bg-[#141418]/60 hover:bg-[#18181f]/70 border-white/5 hover:border-white/10 text-zinc-400'
+                                    }`}
+                                  >
+                                    <div className="space-y-1.5 overflow-hidden flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${msg.read ? 'bg-zinc-700' : 'bg-red-500 animate-pulse'}`} />
+                                        <h4 className="font-sans font-semibold text-xs leading-none text-zinc-200 truncate">{msg.name}</h4>
+                                      </div>
+                                      <p className="font-mono text-[9px] text-zinc-500 leading-none truncate">{msg.email}</p>
+                                      <p className="font-sans text-xs font-semibold text-zinc-300 leading-normal truncate">{msg.subject}</p>
+                                      <span className="block font-mono text-[9px] text-zinc-500">{dateStr}</span>
+                                    </div>
+                                    <div className="flex flex-col justify-between items-end shrink-0">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          if (confirm("Are you sure you want to delete this specification record?")) {
+                                            await deleteContactMessage(msg.id);
+                                            if (selectedMessageId === msg.id) {
+                                              setSelectedMessageId(null);
+                                            }
+                                          }
+                                        }}
+                                        className="p-1.5 hover:bg-red-500/15 hover:text-red-500 duration-200 text-zinc-500 border border-transparent rounded-lg shrink-0 cursor-pointer"
+                                        title="Delete Message Record"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+
+                          {/* Messages Right Detail View Panel */}
+                          <div className="lg:col-span-3">
+                            {selectedMsg ? (
+                              <div className="bg-[#121215]/80 border border-white/5 rounded-2xl p-5 space-y-4">
+                                <div className="flex justify-between items-start gap-4 flex-wrap border-b border-white/5 pb-4">
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2.5">
+                                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${selectedMsg.read ? 'bg-zinc-700' : 'bg-red-500 animate-pulse'}`} />
+                                      <h3 className="font-sans font-medium text-sm text-white">{selectedMsg.name}</h3>
+                                    </div>
+                                    <p className="font-mono text-xs text-zinc-400">Email: <a href={`mailto:${selectedMsg.email}`} className="hover:text-[#00C853] underline">{selectedMsg.email}</a></p>
+                                    <p className="font-mono text-[10px] text-zinc-500">Received On: {new Date(selectedMsg.created_at).toLocaleString('en-US', {
+                                      weekday: 'long',
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      second: '2-digit'
+                                    })}</p>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => toggleReadMessage(selectedMsg.id)}
+                                      className={`px-3 py-1.5 text-[10px] font-mono tracking-wider uppercase rounded-lg border cursor-pointer duration-200 transition-all ${
+                                        selectedMsg.read
+                                          ? 'bg-zinc-950/20 text-zinc-400 border-white/5 hover:bg-white/5'
+                                          : 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20'
+                                      }`}
+                                    >
+                                      {selectedMsg.read ? 'Mark Unread' : 'Mark As Read'}
+                                    </button>
+                                    <a
+                                      href={`mailto:${selectedMsg.email}?subject=RE: ${encodeURIComponent(selectedMsg.subject)}`}
+                                      className="px-3 py-1.5 bg-[#00C853] hover:bg-[#00E55F] text-black text-[10px] font-mono tracking-wider font-semibold uppercase rounded-lg duration-200 flex items-center gap-1.5 shrink-0"
+                                    >
+                                      <ExternalLink className="w-3 h-3" /> Reply Client
+                                    </a>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                  <div className="bg-black/25 border border-white/5 p-3 rounded-lg">
+                                    <span className="block font-mono text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Subject Matter</span>
+                                    <p className="font-sans text-xs text-white leading-normal font-medium">{selectedMsg.subject}</p>
+                                  </div>
+
+                                  <div className="bg-[#141418] border border-white/5 p-4 rounded-xl text-left">
+                                    <span className="block font-mono text-[9px] text-[#00C853] uppercase tracking-widest mb-2.5">Specification Body / Message</span>
+                                    <p className="font-sans text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap select-text">{selectedMsg.message}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="bg-[#121215]/40 border border-dashed border-white/5 rounded-2xl h-full flex flex-col items-center justify-center p-8 text-zinc-500 text-center text-xs font-sans">
+                                Select a client message from the left feed stream to review metadata specifications.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()
+                  )}
                 </div>
               )}
 
