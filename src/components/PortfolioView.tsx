@@ -136,7 +136,7 @@ export default function PortfolioView() {
                   <div className="flex flex-wrap gap-1.5 mb-6">
                     {(project.technologies || []).slice(0, 3).map((tech, idx) => (
                       <span 
-                        key={idx} 
+                        key={`${tech}-${idx}`} 
                         className={`font-mono text-[9px] px-2 py-0.5 rounded border ${
                           isLight 
                             ? 'bg-zinc-50 border-zinc-200 text-zinc-620' 
@@ -229,9 +229,9 @@ export default function PortfolioView() {
 
                   {/* Skills/Tags in modal */}
                   <div className="flex flex-wrap gap-2 mb-8">
-                    {(selectedProject.technologies || []).map((tech) => (
+                    {(selectedProject.technologies || []).map((tech, idx) => (
                       <span 
-                        key={tech} 
+                        key={`${tech}-${idx}`} 
                         className={`font-mono text-[10px] px-3 py-1 rounded-md border ${
                           isLight 
                             ? 'bg-zinc-50 border-zinc-200 text-zinc-700' 

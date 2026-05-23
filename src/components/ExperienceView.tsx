@@ -154,13 +154,12 @@ export default function ExperienceView() {
                     ))}
                   </ul>
 
-                  {/* Badges checklist */}
                   <div className={`flex flex-wrap gap-1.5 pt-4 border-t ${
                     isLight ? 'border-zinc-150' : 'border-white/5'
                   }`}>
-                    {(event.skills || []).map((skill) => (
+                    {(event.skills || []).map((skill, idx) => (
                       <span 
-                        key={skill} 
+                        key={`${skill}-${idx}`} 
                         className={`font-mono text-[9px] px-2.5 py-1 rounded border transition-colors ${
                           isLight 
                             ? 'bg-zinc-50 border-zinc-200 text-zinc-650' 

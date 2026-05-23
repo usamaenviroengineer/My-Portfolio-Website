@@ -44,12 +44,12 @@ export default function AboutView() {
           <h1 className={`font-display text-4xl sm:text-5xl font-extrabold tracking-tight mb-6 ${
             isLight ? 'text-zinc-900' : 'text-white'
           }`}>
-            Meet Usama Rasheed
+            Meet {userInfo?.fullName || "Usama Rasheed"}
           </h1>
           <p className={`text-sm sm:text-base leading-relaxed ${
             isLight ? 'text-zinc-650' : 'text-zinc-440'
           }`}>
-            I study Environmental Engineering at Mehran U.E.T - Jamshoro. Parallel to laboratory chemical assays and water treatment designs, I develop high-performance software systems and automated AI platforms addressing critical environmental and digital milestones.
+            {userInfo?.aboutBrief || "I study Environmental Engineering at Mehran U.E.T - Jamshoro. Parallel to laboratory chemical assays and water treatment designs, I develop high-performance software systems and automated AI platforms addressing critical environmental and digital milestones."}
           </p>
         </div>
 
@@ -191,9 +191,9 @@ export default function AboutView() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start w-full">
               {/* Left categories list */}
               <div className="lg:col-span-4 flex flex-col gap-2.5 w-full">
-                {skills.map((grp) => (
+                {skills.map((grp, idx) => (
                   <button
-                    key={grp.category}
+                    key={`${grp.category}-${idx}`}
                     onClick={() => setSelectedSkillCategory(grp.category)}
                     className={`py-4 px-6 rounded-xl border font-display text-xs font-bold tracking-wider uppercase transition-all duration-300 text-left cursor-pointer focus:outline-hidden ${
                       selectedSkillCategory === grp.category
@@ -221,8 +221,8 @@ export default function AboutView() {
                 </h3>
                 
                 <div className="space-y-6">
-                  {activeCategorySkills.map((skill) => (
-                    <div key={skill.name} className="flex flex-col text-left">
+                  {activeCategorySkills.map((skill, idx) => (
+                    <div key={`${skill.name}-${idx}`} className="flex flex-col text-left">
                       <div className="flex items-center justify-between mb-2">
                         <span className={`text-sm font-medium font-display leading-tight ${isLight ? 'text-zinc-800' : 'text-zinc-300'}`}>{skill.name}</span>
                         <span className="text-xs font-mono text-[#00C853] font-bold">{skill.percentage}%</span>

@@ -82,7 +82,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
                 isLight ? 'text-zinc-900' : 'text-white'
               }`}
             >
-              Hi, I’m Usama Rasheed
+              Hi, I’m {userInfo?.fullName || "Usama Rasheed"}
             </motion.h1>
 
             {/* Subtitle */}
@@ -97,7 +97,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
               <span className={`text-transparent bg-clip-text bg-linear-to-r green-text-glow font-extrabold ${
                 isLight ? 'from-zinc-950 via-[#006428] to-[#00C853]' : 'from-white via-[#00C853] to-emerald-400'
               }`}>
-                Environmental Engineer & AI-Powered Tech Specialist
+                {userInfo?.role || "Environmental Engineer & AI-Powered Tech Specialist"}
               </span>
             </motion.h2>
 
@@ -110,7 +110,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
                 isLight ? 'text-zinc-650' : 'text-zinc-440'
               }`}
             >
-              Passionate about combining sustainability, artificial intelligence, and modern development to create smart digital solutions for businesses, environmental projects, and future-focused innovation.
+              {userInfo?.tagline || "Passionate about combining sustainability, artificial intelligence, and modern development to create smart digital solutions for businesses, environmental projects, and future-focused innovation."}
             </motion.p>
 
             {/* Call to Actions buttons */}

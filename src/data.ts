@@ -62,7 +62,7 @@ export const PROJECTS_DATA: Project[] = [
     description: "A gorgeous, high-performance website and client booking management system engineered to showcase web development craft and automate digital lead generation.",
     category: "Web Development",
     imageUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800",
-    technologies: ["Next.js", "Framer Motion", "Tailwind CSS", "Framer Motion", "Node.js"],
+    technologies: ["Next.js", "Framer Motion", "Tailwind CSS", "Node.js"],
     liveUrl: "#",
     githubUrl: "#",
     extendedDetails: {

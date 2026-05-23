@@ -1286,8 +1286,8 @@ CREATE POLICY "Allow authenticated full control contact_messages" ON contact_mes
                             </div>
 
                             <div className="flex flex-wrap gap-1">
-                              {proj.technologies.slice(0, 5).map((tech) => (
-                                <span key={tech} className="bg-white/5 border border-white/5 text-[9px] font-mono px-1.5 py-0.5 rounded-md text-zinc-400">
+                              {proj.technologies.slice(0, 5).map((tech, idx) => (
+                                <span key={`${tech}-${idx}`} className="bg-white/5 border border-white/5 text-[9px] font-mono px-1.5 py-0.5 rounded-md text-zinc-400">
                                   {tech}
                                 </span>
                               ))}
@@ -1909,7 +1909,7 @@ CREATE POLICY "Allow authenticated full control contact_messages" ON contact_mes
 
                   <div className="space-y-6">
                     {skillsForm.map((group, groupIdx) => (
-                      <div key={group.category} className="bg-[#121215]/60 hover:bg-[#121215]/90 duration-300 border border-white/5 rounded-xl p-5 space-y-4">
+                      <div key={`${group.category}-${groupIdx}`} className="bg-[#121215]/60 hover:bg-[#121215]/90 duration-300 border border-white/5 rounded-xl p-5 space-y-4">
                         <div className="flex justify-between items-center border-b border-white/5 pb-2">
                           <input
                             type="text"
@@ -1926,7 +1926,7 @@ CREATE POLICY "Allow authenticated full control contact_messages" ON contact_mes
 
                         <div className="space-y-4 font-sans text-xs">
                           {group.skills.map((skill, skillIdx) => (
-                            <div key={skill.name} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div key={`${skill.name}-${skillIdx}`} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                               <input
                                 type="text"
                                 value={skill.name}

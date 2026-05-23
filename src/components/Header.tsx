@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X, ArrowUpRight, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../ThemeContext';
+import { usePortfolioData } from '../PortfolioDataContext';
 
 interface HeaderProps {
   activePage: string;
@@ -12,6 +13,7 @@ export default function Header({ activePage, onNavigate }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { userInfo } = usePortfolioData();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -61,7 +63,7 @@ export default function Header({ activePage, onNavigate }: HeaderProps) {
           <div className="flex flex-col text-left">
             <span className={`font-display font-semibold text-base tracking-tight transition-colors group-hover:text-[#00C853] ${
               isLight ? 'text-zinc-900' : 'text-white'
-            }`}>Usama Rasheed</span>
+            }`}>{userInfo?.fullName || "Usama Rasheed"}</span>
             <span className="font-mono text-[8px] text-[#00C853] font-bold tracking-widest">ENVIRO & AI SYSTEMS</span>
           </div>
         </button>
