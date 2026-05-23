@@ -579,16 +579,14 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
         return true;
       }
 
-      if (error.code === '42P01') {
-        const updatedBackup = [newMessage, ...contactMessages];
-        return await upsertConfigHelper('contact_messages', updatedBackup);
-      }
-
-      console.error('Failed to save message to db:', error.message);
-      return false;
+      // Fallback fallback on any schema/table error (e.g., table not created in Supabase yet)
+      console.warn('Real-time message table insert failed (fallback to configs table backup):', error.message);
+      const updatedBackup = [newMessage, ...contactMessages];
+      return await upsertConfigHelper('contact_messages', updatedBackup);
     } catch (err) {
-      console.error('Critical write contact message error:', err);
-      return false;
+      console.warn('Dedicated table save exception (fallback to configs table backup):', err);
+      const updatedBackup = [newMessage, ...contactMessages];
+      return await upsertConfigHelper('contact_messages', updatedBackup);
     }
   };
 
@@ -609,15 +607,11 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
         return true;
       }
 
-      if (error.code === '42P01') {
-        return await upsertConfigHelper('contact_messages', finalMessages);
-      }
-
-      console.error('Failed to delete message from db:', error.message);
-      return false;
+      console.warn('Real-time message table delete failed (fallback to configs table backup):', error.message);
+      return await upsertConfigHelper('contact_messages', finalMessages);
     } catch (err) {
-      console.error('Critical delete contact message error:', err);
-      return false;
+      console.warn('Dedicated table delete exception (fallback to configs table backup):', err);
+      return await upsertConfigHelper('contact_messages', finalMessages);
     }
   };
 
@@ -646,15 +640,11 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
         return true;
       }
 
-      if (error.code === '42P01') {
-        return await upsertConfigHelper('contact_messages', updatedMessages);
-      }
-
-      console.error('Failed to update message status:', error.message);
-      return false;
+      console.warn('Real-time message table update failed (fallback to configs table backup):', error.message);
+      return await upsertConfigHelper('contact_messages', updatedMessages);
     } catch (err) {
-      console.error('Critical toggle status contact message error:', err);
-      return false;
+      console.warn('Dedicated table update exception (fallback to configs table backup):', err);
+      return await upsertConfigHelper('contact_messages', updatedMessages);
     }
   };
 
