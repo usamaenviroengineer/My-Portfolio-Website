@@ -193,7 +193,7 @@ export default function AdminView() {
     setTimeout(() => setStatusMessage(null), 4000);
   };
 
-  // Image upload triggers: Uses Cloudinary CDN server upload, with Supabase storage fallback
+  // Image upload triggers: Uses Cloudinary CDN server/preset upload, with Supabase storage fallback
   const triggerFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, targetField: string, isProjectForm = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -203,17 +203,23 @@ export default function AdminView() {
       let uploadedUrl: string | null = null;
       let usedCloudinary = false;
 
-      // 1. Attempt Cloudinary secure server-side upload
+      // 1. Attempt Cloudinary secure server-side or direct preset upload
       try {
+        const targetFolder = isProjectForm 
+          ? 'portfolio/projects' 
+          : targetField.startsWith('seo') 
+            ? 'portfolio/seo' 
+            : 'portfolio/profile';
+
         const cloudRes = await uploadImageToCloudinary(file, {
-          folder: isProjectForm ? 'portfolio/projects' : 'portfolio/profile'
+          folder: targetFolder
         });
         if (cloudRes.success && cloudRes.secureUrl) {
           uploadedUrl = cloudRes.secureUrl;
           usedCloudinary = true;
         }
       } catch (cloudErr) {
-        console.warn('Cloudinary upload attempt failed or not configured, falling back to Supabase:', cloudErr);
+        console.warn('Cloudinary upload attempt failed, falling back to Supabase:', cloudErr);
       }
 
       // 2. Fallback to Supabase Storage if Cloudinary is not yet configured or returned null
@@ -229,6 +235,9 @@ export default function AdminView() {
       if (isProjectForm && editingProject) {
         setEditingProject(prev => ({ ...prev, imageUrl: uploadedUrl }));
         triggerStatus(usedCloudinary ? 'Project image uploaded to Cloudinary CDN successfully!' : 'Project image uploaded to Supabase Storage!');
+      } else if (targetField === 'seo.ogImage' && seoForm) {
+        setSeoForm((prev: any) => ({ ...prev, ogImage: uploadedUrl }));
+        triggerStatus(usedCloudinary ? 'SEO preview image uploaded to Cloudinary! Click Save SEO State to persist.' : 'SEO image uploaded to Supabase Storage.');
       } else if (heroForm) {
         if (targetField.startsWith('images.')) {
           const key = targetField.split('.')[1];
@@ -1150,6 +1159,162 @@ CREATE POLICY "Allow authenticated full control contact_messages" ON contact_mes
                           </div>
                         </div>
                       </div>
+
+                      {/* Contact Photo Card */}
+                      <div className="bg-[#121215] border border-white/5 p-4 rounded-xl flex items-center gap-4">
+                        <img 
+                          src={heroForm.images?.contact || 'https://myphotosss.netlify.app/3.png'} 
+                          alt="Contact thumbnail" 
+                          referrerPolicy="no-referrer"
+                          className="w-14 h-14 object-cover rounded-lg border border-white/10 shrink-0" 
+                        />
+                        <div className="flex-1 space-y-2">
+                          <span className="block font-mono text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Contact Section Artwork</span>
+                          
+                          <div className="flex gap-2">
+                            <label className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md font-mono text-[9px] uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2">
+                              <Upload className="w-3 h-3" />
+                              {uploadLoading === 'images.contact' ? 'Uploading...' : 'Upload File'}
+                              <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => triggerFileUpload(e, 'images.contact')}
+                                className="hidden" 
+                              />
+                            </label>
+                            <input 
+                              type="text" 
+                              value={heroForm.images?.contact || ''}
+                              onChange={(e) => {
+                                const url = e.target.value;
+                                setHeroForm((prev: any) => ({
+                                  ...prev,
+                                  images: { ...prev.images, contact: url }
+                                }));
+                              }}
+                              placeholder="Direct URL Link"
+                              className="bg-black/40 border border-white/5 text-[10px] p-1.5 rounded-md flex-1 text-zinc-300 font-mono focus:outline-hidden"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Creative Photo Card */}
+                      <div className="bg-[#121215] border border-white/5 p-4 rounded-xl flex items-center gap-4">
+                        <img 
+                          src={heroForm.images?.creative || 'https://myphotosss.netlify.app/2.png'} 
+                          alt="Creative thumbnail" 
+                          referrerPolicy="no-referrer"
+                          className="w-14 h-14 object-cover rounded-lg border border-white/10 shrink-0" 
+                        />
+                        <div className="flex-1 space-y-2">
+                          <span className="block font-mono text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Creative Brand Photo 2</span>
+                          
+                          <div className="flex gap-2">
+                            <label className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md font-mono text-[9px] uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2">
+                              <Upload className="w-3 h-3" />
+                              {uploadLoading === 'images.creative' ? 'Uploading...' : 'Upload File'}
+                              <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => triggerFileUpload(e, 'images.creative')}
+                                className="hidden" 
+                              />
+                            </label>
+                            <input 
+                              type="text" 
+                              value={heroForm.images?.creative || ''}
+                              onChange={(e) => {
+                                const url = e.target.value;
+                                setHeroForm((prev: any) => ({
+                                  ...prev,
+                                  images: { ...prev.images, creative: url }
+                                }));
+                              }}
+                              placeholder="Direct URL Link"
+                              className="bg-black/40 border border-white/5 text-[10px] p-1.5 rounded-md flex-1 text-zinc-300 font-mono focus:outline-hidden"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Brand 4 Photo Card */}
+                      <div className="bg-[#121215] border border-white/5 p-4 rounded-xl flex items-center gap-4">
+                        <img 
+                          src={heroForm.images?.brand_4 || 'https://myphotosss.netlify.app/4.png'} 
+                          alt="Brand 4 thumbnail" 
+                          referrerPolicy="no-referrer"
+                          className="w-14 h-14 object-cover rounded-lg border border-white/10 shrink-0" 
+                        />
+                        <div className="flex-1 space-y-2">
+                          <span className="block font-mono text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Brand Artwork Photo 4</span>
+                          
+                          <div className="flex gap-2">
+                            <label className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md font-mono text-[9px] uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2">
+                              <Upload className="w-3 h-3" />
+                              {uploadLoading === 'images.brand_4' ? 'Uploading...' : 'Upload File'}
+                              <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => triggerFileUpload(e, 'images.brand_4')}
+                                className="hidden" 
+                              />
+                            </label>
+                            <input 
+                              type="text" 
+                              value={heroForm.images?.brand_4 || ''}
+                              onChange={(e) => {
+                                const url = e.target.value;
+                                setHeroForm((prev: any) => ({
+                                  ...prev,
+                                  images: { ...prev.images, brand_4: url }
+                                }));
+                              }}
+                              placeholder="Direct URL Link"
+                              className="bg-black/40 border border-white/5 text-[10px] p-1.5 rounded-md flex-1 text-zinc-300 font-mono focus:outline-hidden"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Brand 6 Photo Card */}
+                      <div className="bg-[#121215] border border-white/5 p-4 rounded-xl flex items-center gap-4">
+                        <img 
+                          src={heroForm.images?.brand_6 || 'https://myphotosss.netlify.app/6.png'} 
+                          alt="Brand 6 thumbnail" 
+                          referrerPolicy="no-referrer"
+                          className="w-14 h-14 object-cover rounded-lg border border-white/10 shrink-0" 
+                        />
+                        <div className="flex-1 space-y-2">
+                          <span className="block font-mono text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Brand Artwork Photo 6</span>
+                          
+                          <div className="flex gap-2">
+                            <label className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md font-mono text-[9px] uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2">
+                              <Upload className="w-3 h-3" />
+                              {uploadLoading === 'images.brand_6' ? 'Uploading...' : 'Upload File'}
+                              <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => triggerFileUpload(e, 'images.brand_6')}
+                                className="hidden" 
+                              />
+                            </label>
+                            <input 
+                              type="text" 
+                              value={heroForm.images?.brand_6 || ''}
+                              onChange={(e) => {
+                                const url = e.target.value;
+                                setHeroForm((prev: any) => ({
+                                  ...prev,
+                                  images: { ...prev.images, brand_6: url }
+                                }));
+                              }}
+                              placeholder="Direct URL Link"
+                              className="bg-black/40 border border-white/5 text-[10px] p-1.5 rounded-md flex-1 text-zinc-300 font-mono focus:outline-hidden"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -2048,14 +2213,38 @@ CREATE POLICY "Allow authenticated full control contact_messages" ON contact_mes
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-zinc-400 text-[10px] font-mono uppercase tracking-wider mb-2">Open Graph Image (Social Link Media Image preview URL)</label>
-                      <input
-                        type="text"
-                        value={seoForm.ogImage || ''}
-                        onChange={(e) => setSeoForm({ ...seoForm, ogImage: e.target.value })}
-                        className="w-full bg-[#141418] border border-white/5 p-3 rounded-lg text-white font-mono"
+                    <div className="bg-[#121215] border border-white/5 p-4 rounded-xl flex items-center gap-4">
+                      <img 
+                        src={seoForm.ogImage || 'https://myphotosss.netlify.app/5.png'} 
+                        alt="SEO preview thumbnail" 
+                        referrerPolicy="no-referrer"
+                        className="w-16 h-16 object-cover rounded-lg border border-white/10 shrink-0" 
                       />
+                      <div className="flex-1 space-y-2">
+                        <span className="block font-mono text-[9px] uppercase tracking-wider text-zinc-400 font-bold">
+                          Open Graph Image (Social Link Media Image preview URL)
+                        </span>
+                        
+                        <div className="flex gap-2">
+                          <label className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md font-mono text-[9px] uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2">
+                            <Upload className="w-3 h-3" />
+                            {uploadLoading === 'seo.ogImage' ? 'Uploading...' : 'Upload File'}
+                            <input 
+                              type="file" 
+                              accept="image/*"
+                              onChange={(e) => triggerFileUpload(e, 'seo.ogImage')}
+                              className="hidden" 
+                            />
+                          </label>
+                          <input
+                            type="text"
+                            value={seoForm.ogImage || ''}
+                            onChange={(e) => setSeoForm({ ...seoForm, ogImage: e.target.value })}
+                            placeholder="Direct URL Link or Cloudinary CDN address"
+                            className="bg-black/40 border border-white/5 text-[10px] p-1.5 rounded-md flex-1 text-zinc-300 font-mono focus:outline-hidden"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

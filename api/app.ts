@@ -6,10 +6,11 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Configure Cloudinary from server environment
-const cloudName = process.env.CLOUDINARY_CLOUD_NAME || '';
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME || process.env.VITE_CLOUDINARY_CLOUD_NAME || '';
 const apiKey = process.env.CLOUDINARY_API_KEY || '';
 const apiSecret = process.env.CLOUDINARY_API_SECRET || '';
 const cloudinaryUrl = process.env.CLOUDINARY_URL || '';
+const uploadPreset = process.env.VITE_CLOUDINARY_UPLOAD_PRESET || process.env.CLOUDINARY_UPLOAD_PRESET || '';
 
 if (cloudinaryUrl) {
   cloudinary.config({
@@ -22,11 +23,84 @@ if (cloudinaryUrl) {
     api_secret: apiSecret,
     secure: true,
   });
+} else if (cloudName) {
+  cloudinary.config({
+    cloud_name: cloudName,
+    secure: true,
+  });
 }
 
 export function isCloudinaryConfigured(): boolean {
   const currentConfig = cloudinary.config();
-  return !!(currentConfig.cloud_name && currentConfig.api_key && currentConfig.api_secret);
+  const hasSdkAuth = !!(currentConfig.cloud_name && currentConfig.api_key && currentConfig.api_secret);
+  const hasPresetAuth = !!(cloudName && uploadPreset);
+  return hasSdkAuth || hasPresetAuth;
+}
+
+/**
+ * Universal Cloudinary upload worker:
+ * Supports signed uploads (API Secret) or unsigned uploads (VITE_CLOUDINARY_UPLOAD_PRESET).
+ */
+async function performCloudinaryUpload(
+  source: string,
+  options: { folder?: string; publicId?: string; tags?: string[] } = {}
+) {
+  const currentConfig = cloudinary.config();
+  const hasSdkAuth = !!(currentConfig.cloud_name && currentConfig.api_key && currentConfig.api_secret);
+
+  if (hasSdkAuth) {
+    const uploadOptions: any = {
+      folder: options.folder || 'portfolio',
+      resource_type: 'image',
+      tags: options.tags || ['portfolio'],
+      overwrite: true,
+    };
+    if (options.publicId) {
+      uploadOptions.public_id = options.publicId;
+    }
+    const result = await cloudinary.uploader.upload(source, uploadOptions);
+    return {
+      secure_url: result.secure_url,
+      public_id: result.public_id,
+      format: result.format,
+      width: result.width,
+      height: result.height,
+      bytes: result.bytes,
+      created_at: result.created_at,
+    };
+  }
+
+  // Unsigned upload preset mode (REST API)
+  const effectiveCloudName = cloudName || currentConfig.cloud_name;
+  if (!effectiveCloudName || !uploadPreset) {
+    throw new Error('Cloudinary is not configured. Please supply CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in environment variables.');
+  }
+
+  const formData = new FormData();
+  formData.append('file', source);
+  formData.append('upload_preset', uploadPreset);
+  if (options.folder) formData.append('folder', options.folder);
+  if (options.publicId) formData.append('public_id', options.publicId);
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${effectiveCloudName}/image/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    throw new Error(data.error?.message || `Cloudinary upload failed with HTTP status ${res.status}`);
+  }
+
+  return {
+    secure_url: data.secure_url,
+    public_id: data.public_id,
+    format: data.format,
+    width: data.width,
+    height: data.height,
+    bytes: data.bytes,
+    created_at: data.created_at,
+  };
 }
 
 // Supabase client for validating admin JWT bearer tokens
@@ -104,7 +178,8 @@ const healthHandler = (_req: Request, res: Response) => {
     environment: process.env.NODE_ENV || 'development',
     cloudinary: {
       configured: isCloudinaryConfigured(),
-      cloudName: currentConfig.cloud_name || null,
+      cloudName: cloudName || currentConfig.cloud_name || null,
+      mode: (currentConfig.api_key && currentConfig.api_secret) ? 'signed_sdk' : uploadPreset ? 'unsigned_preset' : 'none'
     },
     supabase: {
       configured: !!supabaseServer,
@@ -117,7 +192,9 @@ const configHandler = (_req: Request, res: Response) => {
   const currentConfig = cloudinary.config();
   res.json({
     configured: isCloudinaryConfigured(),
-    cloudName: currentConfig.cloud_name || null,
+    cloudName: cloudName || currentConfig.cloud_name || null,
+    hasUploadPreset: !!uploadPreset,
+    uploadPreset: uploadPreset || null,
   });
 };
 
@@ -125,7 +202,7 @@ const configHandler = (_req: Request, res: Response) => {
 const uploadHandler = async (req: Request, res: Response) => {
   if (!isCloudinaryConfigured()) {
     return res.status(503).json({
-      error: 'Cloudinary credentials are not configured on the server. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your Vercel / environment variables.',
+      error: 'Cloudinary credentials are not configured on the server. Please set CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in your environment variables.',
       code: 'CLOUDINARY_NOT_CONFIGURED'
     });
   }
@@ -151,28 +228,15 @@ const uploadHandler = async (req: Request, res: Response) => {
   }
 
   try {
-    const uploadOptions: any = {
-      folder: folder || 'portfolio',
-      resource_type: 'image',
-      tags: tags,
-      overwrite: true,
-    };
-
-    if (publicId) {
-      uploadOptions.public_id = publicId;
-    }
-
-    const result = await cloudinary.uploader.upload(targetSource, uploadOptions);
+    const result = await performCloudinaryUpload(targetSource, {
+      folder,
+      publicId,
+      tags
+    });
 
     return res.json({
       success: true,
-      secure_url: result.secure_url,
-      public_id: result.public_id,
-      format: result.format,
-      width: result.width,
-      height: result.height,
-      bytes: result.bytes,
-      created_at: result.created_at
+      ...result
     });
   } catch (err: any) {
     console.error('[Cloudinary Upload Error]', err);
@@ -230,27 +294,17 @@ const batchMigrationHandler = async (req: Request, res: Response) => {
     }
 
     try {
-      const uploadOptions: any = {
+      const uploadRes = await performCloudinaryUpload(remoteUrl, {
         folder: folder || 'portfolio',
-        resource_type: 'image',
-        tags: ['portfolio_migration'],
-        overwrite: true,
-      };
+        publicId,
+        tags: ['portfolio_migration']
+      });
 
-      if (publicId) {
-        uploadOptions.public_id = publicId;
-      }
-
-      const uploadRes = await cloudinary.uploader.upload(remoteUrl, uploadOptions);
       results.push({
         id,
         success: true,
         current_url: remoteUrl,
-        secure_url: uploadRes.secure_url,
-        public_id: uploadRes.public_id,
-        width: uploadRes.width,
-        height: uploadRes.height,
-        format: uploadRes.format
+        ...uploadRes
       });
     } catch (itemErr: any) {
       console.error(`[Batch Migration Failed for item ${id}]`, itemErr);

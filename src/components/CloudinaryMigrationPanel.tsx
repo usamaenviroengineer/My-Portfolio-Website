@@ -379,7 +379,7 @@ export default function CloudinaryMigrationPanel({
           </p>
         </div>
 
-        {/* Backend Cloudinary Connection Indicator */}
+        {/* Cloudinary Connection Indicator */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className={`px-3.5 py-2 rounded-xl border flex items-center gap-2.5 ${
             cloudStatus.configured
@@ -389,10 +389,11 @@ export default function CloudinaryMigrationPanel({
             <div className={`w-2 h-2 rounded-full ${cloudStatus.configured ? 'bg-[#00C853] animate-pulse' : 'bg-amber-400'}`} />
             <div className="text-left font-mono text-[10px] uppercase tracking-wider">
               <span className="block font-bold">
-                {cloudStatus.configured ? 'Cloudinary Server Active' : 'Credentials Needed'}
+                {cloudStatus.configured ? 'Cloudinary Ready' : 'Credentials Needed'}
               </span>
-              <span className="text-zinc-400 text-[9px] lowercase font-sans">
-                {cloudStatus.cloudName ? `cloud: ${cloudStatus.cloudName}` : 'Add Vercel env variables'}
+              <span className="text-zinc-400 text-[9px] font-sans">
+                {cloudStatus.cloudName ? `Cloud: ${cloudStatus.cloudName}` : 'Add Vercel env variables'}
+                {cloudStatus.uploadPreset ? ` • Preset: ${cloudStatus.uploadPreset}` : ''}
               </span>
             </div>
           </div>
@@ -408,7 +409,7 @@ export default function CloudinaryMigrationPanel({
         </div>
       </div>
 
-      {/* 2. Configuration Alert Banner (if credentials are not set on Vercel yet) */}
+      {/* 2. Configuration Alert Banner (if credentials are not detected) */}
       {!cloudStatus.configured && (
         <div className="bg-amber-950/20 border border-amber-500/30 rounded-xl p-5 text-amber-200 text-xs space-y-3">
           <div className="flex items-center gap-2.5 font-bold">
@@ -416,24 +417,22 @@ export default function CloudinaryMigrationPanel({
             <span>Cloudinary Environment Variables Setup Guide (Vercel)</span>
           </div>
           <p className="leading-relaxed text-zinc-300">
-            To enable server-side Cloudinary uploads and migration on Vercel, go to your <strong>Vercel Project Settings &gt; Environment Variables</strong> and add:
+            To enable Cloudinary uploads and migration on Vercel, make sure the following two environment variables are added under <strong>Vercel Project Settings &gt; Environment Variables</strong>:
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 font-mono text-[11px]">
-            <div className="bg-black/60 border border-white/5 p-2.5 rounded-lg">
-              <span className="text-[#00C853] block text-[9px] uppercase tracking-wider">Cloud Name</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-[11px]">
+            <div className="bg-black/60 border border-white/5 p-3 rounded-lg">
+              <span className="text-[#00C853] block text-[9px] uppercase tracking-wider">Cloud Name (Required)</span>
               <span className="text-white font-bold">CLOUDINARY_CLOUD_NAME</span>
+              <span className="block text-zinc-400 text-[9px] mt-1 font-sans">Your Cloudinary account cloud identifier.</span>
             </div>
-            <div className="bg-black/60 border border-white/5 p-2.5 rounded-lg">
-              <span className="text-[#00C853] block text-[9px] uppercase tracking-wider">API Key</span>
-              <span className="text-white font-bold">CLOUDINARY_API_KEY</span>
-            </div>
-            <div className="bg-black/60 border border-white/5 p-2.5 rounded-lg">
-              <span className="text-[#00C853] block text-[9px] uppercase tracking-wider">API Secret</span>
-              <span className="text-white font-bold">CLOUDINARY_API_SECRET</span>
+            <div className="bg-black/60 border border-white/5 p-3 rounded-lg">
+              <span className="text-[#00C853] block text-[9px] uppercase tracking-wider">Upload Preset (Required)</span>
+              <span className="text-white font-bold">VITE_CLOUDINARY_UPLOAD_PRESET</span>
+              <span className="block text-zinc-400 text-[9px] mt-1 font-sans">An unsigned upload preset created in Cloudinary Console &gt; Settings &gt; Upload.</span>
             </div>
           </div>
           <p className="text-[11px] text-zinc-400 font-sans">
-            Once added in Vercel (or in your local <code className="text-emerald-400">.env</code> file), click the refresh button above to activate. You can scan and preview your images below right now.
+            <em>Note:</em> No <code className="text-zinc-300">CLOUDINARY_API_KEY</code> or <code className="text-zinc-300">CLOUDINARY_API_SECRET</code> is required when using an unsigned upload preset. Once added, click the refresh button above to activate.
           </p>
         </div>
       )}
