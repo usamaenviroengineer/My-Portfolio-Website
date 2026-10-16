@@ -4,6 +4,7 @@ import { usePortfolioData } from '../PortfolioDataContext';
 import { Project } from '../types';
 import { useTheme } from '../ThemeContext';
 import { ExternalLink, Github, X, Compass, ShieldAlert, Award, ArrowRight } from 'lucide-react';
+import { getOptimizedImageUrl } from '../utils/cloudinary';
 
 export default function PortfolioView() {
   const { projects } = usePortfolioData();
@@ -97,7 +98,7 @@ export default function PortfolioView() {
                   {/* Thumbnail */}
                   <div className="aspect-[16/10] relative overflow-hidden bg-zinc-850">
                     <img
-                      src={project.imageUrl}
+                      src={getOptimizedImageUrl(project.imageUrl, { width: 800, crop: 'limit', quality: 'auto', format: 'auto' })}
                       alt={project.title}
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-103"
@@ -204,7 +205,7 @@ export default function PortfolioView() {
                 {/* Hero Thumbnail banner inside modal */}
                 <div className="aspect-[16/9] w-full relative bg-zinc-800">
                   <img
-                    src={selectedProject.imageUrl}
+                    src={getOptimizedImageUrl(selectedProject.imageUrl, { width: 1200, crop: 'limit', quality: 'auto', format: 'auto' })}
                     alt={selectedProject.title}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover"

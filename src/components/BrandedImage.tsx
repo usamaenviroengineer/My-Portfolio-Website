@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useTheme } from '../ThemeContext';
+import { getOptimizedImageUrl } from '../utils/cloudinary';
 
 interface BrandedImageProps {
   src: string;
@@ -14,6 +15,7 @@ export default function BrandedImage({ src, alt, className = "", aspectRatio = "
   const { theme } = useTheme();
 
   const isLight = theme === 'light';
+  const optimizedSrc = getOptimizedImageUrl(src, { width: 900, crop: 'limit', quality: 'auto', format: 'auto' });
 
   return (
     <div 
@@ -43,7 +45,7 @@ export default function BrandedImage({ src, alt, className = "", aspectRatio = "
         }}
       >
         <img
-          src={src}
+          src={optimizedSrc}
           alt={alt}
           referrerPolicy="no-referrer"
           className={`w-full h-full object-contain filter transition-all duration-700 ease-out select-none pointer-events-none ${

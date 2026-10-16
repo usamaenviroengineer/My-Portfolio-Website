@@ -49,3 +49,9 @@ export interface ContactMessage {
   read: boolean;
 }
 
+export interface SEOSettings {
+  metaTitle: string;
+  metaDescription: string;
+  keywords: string;
+  ogImage?: string;
+}

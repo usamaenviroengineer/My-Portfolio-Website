@@ -32,9 +32,11 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
-  HelpCircle,
-  Database
+  Database,
+  CloudLightning
 } from 'lucide-react';
+import { uploadImageToCloudinary } from '../services/cloudinaryService';
+import CloudinaryMigrationPanel from './CloudinaryMigrationPanel';
 
 export default function AdminView() {
   const { 
@@ -191,24 +193,42 @@ export default function AdminView() {
     setTimeout(() => setStatusMessage(null), 4000);
   };
 
-  // Image upload triggers
+  // Image upload triggers: Uses Cloudinary CDN server upload, with Supabase storage fallback
   const triggerFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, targetField: string, isProjectForm = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
       setUploadLoading(targetField);
-      // Upload raw image attachment toassets bucket on Supabase Storage
-      const uploadedUrl = await uploadImage(file);
+      let uploadedUrl: string | null = null;
+      let usedCloudinary = false;
+
+      // 1. Attempt Cloudinary secure server-side upload
+      try {
+        const cloudRes = await uploadImageToCloudinary(file, {
+          folder: isProjectForm ? 'portfolio/projects' : 'portfolio/profile'
+        });
+        if (cloudRes.success && cloudRes.secureUrl) {
+          uploadedUrl = cloudRes.secureUrl;
+          usedCloudinary = true;
+        }
+      } catch (cloudErr) {
+        console.warn('Cloudinary upload attempt failed or not configured, falling back to Supabase:', cloudErr);
+      }
+
+      // 2. Fallback to Supabase Storage if Cloudinary is not yet configured or returned null
+      if (!uploadedUrl) {
+        uploadedUrl = await uploadImage(file);
+      }
       
       if (!uploadedUrl) {
-        triggerStatus('Image upload failed. Run storage setup SQL commands in Supabase first.', 'error');
+        triggerStatus('Image upload failed. Check Cloudinary or Supabase Storage setup.', 'error');
         return;
       }
 
       if (isProjectForm && editingProject) {
         setEditingProject(prev => ({ ...prev, imageUrl: uploadedUrl }));
-        triggerStatus('Project mock image uploaded to Supabase Assets successfully!');
+        triggerStatus(usedCloudinary ? 'Project image uploaded to Cloudinary CDN successfully!' : 'Project image uploaded to Supabase Storage!');
       } else if (heroForm) {
         if (targetField.startsWith('images.')) {
           const key = targetField.split('.')[1];
@@ -219,7 +239,7 @@ export default function AdminView() {
               [key]: uploadedUrl
             }
           }));
-          triggerStatus(`Dashboard design profile ${key} image updated! Submit changes to save.`);
+          triggerStatus(usedCloudinary ? `Profile ${key} image uploaded to Cloudinary! Click Save Identity to persist.` : `Profile ${key} image updated. Click Save to persist.`);
         }
       }
     } catch (err) {
@@ -734,6 +754,7 @@ export default function AdminView() {
             <nav className="space-y-1">
               {[
                 { id: 'database', label: 'Database & Health', icon: Database },
+                { id: 'cloudinary', label: 'Cloudinary Migration', icon: CloudLightning },
                 { id: 'hero', label: 'Hero & About Bio', icon: Cpu },
                 { id: 'projects', label: 'Dynamic Projects', icon: FolderGit },
                 { id: 'services', label: 'Services Grid', icon: Layers },
@@ -970,6 +991,19 @@ CREATE POLICY "Allow authenticated full control contact_messages" ON contact_mes
                     </div>
                   </div>
                 </div>
+              )}
+
+              {/* 1.5 Cloudinary Image Migration Panel */}
+              {activeTab === 'cloudinary' && (
+                <CloudinaryMigrationPanel
+                  userInfo={userInfo}
+                  projects={projects}
+                  seoSettings={seoSettings}
+                  saveUserInfo={saveUserInfo}
+                  saveProjects={saveProjects}
+                  saveSEOSettings={saveSEOSettings}
+                  triggerStatus={triggerStatus}
+                />
               )}
 
               {/* 2. Hero & About panel */}
