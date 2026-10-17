@@ -2,6 +2,7 @@ import app from './api/app';
 import { createServer as createViteServer } from 'vite';
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,6 +19,27 @@ async function start() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
+
+    // Explicit fallback handler for client-side SPA routing in dev mode
+    app.use('*', async (req, res, next) => {
+      if (req.method !== 'GET' || req.originalUrl.startsWith('/api')) {
+        return next();
+      }
+      try {
+        const url = req.originalUrl;
+        const indexPath = path.resolve(__dirname, 'index.html');
+        if (fs.existsSync(indexPath)) {
+          let template = fs.readFileSync(indexPath, 'utf-8');
+          template = await vite.transformIndexHtml(url, template);
+          res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+        } else {
+          next();
+        }
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
+    });
   } else {
     // Serve static frontend build in production Node environment
     app.use(express.static(path.resolve(__dirname, 'dist')));
@@ -26,8 +48,12 @@ async function start() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`[Usama Portfolio Server] Running on http://localhost:${PORT} (${isProd ? 'production' : 'development'})`);
+  });
+
+  server.on('error', (err) => {
+    console.error('[Server Runtime Error]', err);
   });
 }
 

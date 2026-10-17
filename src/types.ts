@@ -55,3 +55,39 @@ export interface SEOSettings {
   keywords: string;
   ogImage?: string;
 }
+
+export interface BlogAuthor {
+  name: string;
+  role: string;
+  avatar: string;
+  bio?: string;
+}
+
+export interface BlogSEOMetadata {
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string;
+  canonicalUrl?: string;
+  ogImage?: string;
+}
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string; // Rich HTML content
+  featuredImage: string;
+  category: string;
+  tags: string[];
+  author: BlogAuthor;
+  publishedAt: string; // ISO date string
+  updatedAt: string;
+  readingTime: string; // e.g. "6 min read"
+  status: 'published' | 'draft' | 'scheduled' | 'archived';
+  scheduledDate?: string;
+  featured: boolean; // Pinned or highlighted post
+  seo?: BlogSEOMetadata;
+  views?: number;
+}
+

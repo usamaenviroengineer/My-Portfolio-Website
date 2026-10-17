@@ -8,6 +8,8 @@ import ServicesView from './components/ServicesView';
 import PortfolioView from './components/PortfolioView';
 import ExperienceView from './components/ExperienceView';
 import ContactView from './components/ContactView';
+import BlogsView from './components/BlogsView';
+import BlogPostDetailView from './components/BlogPostDetailView';
 import AdminView from './components/AdminView';
 import { ThemeProvider, useTheme } from './ThemeContext';
 import { PortfolioDataProvider } from './PortfolioDataContext';
@@ -19,16 +21,18 @@ function MainApp() {
   // URL Path synchronization (Clean SEO Path Routing with Hash migration)
   useEffect(() => {
     const parsePath = () => {
-      const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'contact', 'admin-usama'];
+      const validPages = ['home', 'about', 'services', 'portfolio', 'experience', 'blogs', 'contact', 'admin-usama'];
       
       // 1. Migrating legacy Hash links to clean Pathname links transparently
       if (window.location.hash) {
         const hash = window.location.hash.replace('#/', '').replace('#', '');
-        if (hash && validPages.includes(hash)) {
-          const cleanPath = hash === 'home' ? '/' : `/${hash}`;
-          window.history.replaceState(null, '', cleanPath);
-          setActivePage(hash);
-          return;
+        if (hash) {
+          if (validPages.includes(hash) || hash.startsWith('blogs/')) {
+            const cleanPath = hash === 'home' ? '/' : `/${hash}`;
+            window.history.replaceState(null, '', cleanPath);
+            setActivePage(hash);
+            return;
+          }
         }
       }
 
@@ -38,7 +42,7 @@ function MainApp() {
       
       if (!route) {
         setActivePage('home');
-      } else if (validPages.includes(route)) {
+      } else if (validPages.includes(route) || route.startsWith('blogs/')) {
         setActivePage(route);
       } else {
         setActivePage('home');
@@ -55,13 +59,22 @@ function MainApp() {
   }, []);
 
   const handleNavigate = (pageId: string) => {
-    const targetPath = pageId === 'home' ? '/' : `/${pageId}`;
+    const cleanId = pageId.replace(/^\/+/, '');
+    const targetPath = cleanId === 'home' ? '/' : `/${cleanId}`;
     window.history.pushState(null, '', targetPath);
     window.scrollTo({ top: 0, behavior: 'instant' });
-    setActivePage(pageId);
+    setActivePage(cleanId);
   };
 
   const renderActiveView = () => {
+    if (activePage === 'blogs') {
+      return <BlogsView onNavigate={handleNavigate} />;
+    }
+    if (activePage.startsWith('blogs/')) {
+      const slug = activePage.replace(/^blogs\//, '');
+      return <BlogPostDetailView slug={slug} onNavigate={handleNavigate} />;
+    }
+
     switch (activePage) {
       case 'about':
         return <AboutView />;
@@ -74,7 +87,7 @@ function MainApp() {
       case 'contact':
         return <ContactView />;
       case 'admin-usama':
-        return <AdminView />;
+        return <AdminView onOpenLiveArticle={(slug) => handleNavigate(`blogs/${slug}`)} />;
       case 'home':
       default:
         return <HomeView onNavigate={handleNavigate} />;
@@ -118,8 +131,8 @@ function MainApp() {
           ? 'bg-black/5 border-black/5 shadow-xs' 
           : 'bg-[#000000]/40 border-white/5 shadow-2xl'
       }`}>
-        {['home', 'about', 'services', 'portfolio', 'experience', 'contact'].map((page) => {
-          const isActive = activePage === page;
+        {['home', 'about', 'services', 'portfolio', 'experience', 'blogs'].map((page) => {
+          const isActive = activePage === page || (page === 'blogs' && activePage.startsWith('blogs'));
           return (
             <button
               key={page}

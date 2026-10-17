@@ -155,7 +155,7 @@ export default function Footer({ onNavigate }: FooterProps) {
               isLight ? 'text-zinc-950' : 'text-white'
             }`}>Directory</h4>
             <ul className="space-y-3 font-display text-xs">
-              {['home', 'about', 'services', 'portfolio', 'experience', 'contact'].map((page) => (
+              {['home', 'about', 'services', 'portfolio', 'experience', 'blogs', 'contact'].map((page) => (
                 <li key={page}>
                   <button 
                     onClick={() => handleNavClick(page)}

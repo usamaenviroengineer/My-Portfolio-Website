@@ -33,12 +33,18 @@ import {
   ChevronRight,
   Sparkles,
   Database,
-  CloudLightning
+  CloudLightning,
+  BookOpen
 } from 'lucide-react';
 import { uploadImageToCloudinary } from '../services/cloudinaryService';
 import CloudinaryMigrationPanel from './CloudinaryMigrationPanel';
+import BlogManagementPanel from './BlogManagementPanel';
 
-export default function AdminView() {
+interface AdminViewProps {
+  onOpenLiveArticle?: (slug: string) => void;
+}
+
+export default function AdminView({ onOpenLiveArticle }: AdminViewProps = {}) {
   const { 
     userInfo, 
     projects, 
@@ -764,6 +770,7 @@ export default function AdminView() {
               {[
                 { id: 'database', label: 'Database & Health', icon: Database },
                 { id: 'cloudinary', label: 'Cloudinary Migration', icon: CloudLightning },
+                { id: 'blogs', label: 'Blog Management', icon: BookOpen },
                 { id: 'hero', label: 'Hero & About Bio', icon: Cpu },
                 { id: 'projects', label: 'Dynamic Projects', icon: FolderGit },
                 { id: 'services', label: 'Services Grid', icon: Layers },
@@ -1012,6 +1019,13 @@ CREATE POLICY "Allow authenticated full control contact_messages" ON contact_mes
                   saveProjects={saveProjects}
                   saveSEOSettings={saveSEOSettings}
                   triggerStatus={triggerStatus}
+                />
+              )}
+
+              {/* 1.6 Blog Management Panel */}
+              {activeTab === 'blogs' && (
+                <BlogManagementPanel
+                  onOpenLiveArticle={onOpenLiveArticle}
                 />
               )}
 

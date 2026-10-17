@@ -67,3 +67,213 @@ html.light ::-webkit-scrollbar-thumb {
 .animate-pulse-glow {
   animation: pulseGlow 8s infinite ease-in-out;
 }
+
+/* Blog Article Typography & Content Styling */
+.blog-article-content {
+  font-size: 1rem;
+  line-height: 1.8;
+  color: #D4D4D8;
+}
+
+html.light .blog-article-content {
+  color: #27272A;
+}
+
+.blog-article-content h1,
+.blog-article-content h2,
+.blog-article-content h3,
+.blog-article-content h4 {
+  color: #FFFFFF;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 2rem;
+  margin-bottom: 0.85rem;
+}
+
+html.light .blog-article-content h1,
+html.light .blog-article-content h2,
+html.light .blog-article-content h3,
+html.light .blog-article-content h4 {
+  color: #09090B;
+}
+
+.blog-article-content h2 {
+  font-size: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.5rem;
+}
+
+html.light .blog-article-content h2 {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.blog-article-content h3 {
+  font-size: 1.25rem;
+}
+
+.blog-article-content p {
+  margin-bottom: 1.25rem;
+}
+
+.blog-article-content strong {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+html.light .blog-article-content strong {
+  color: #09090B;
+}
+
+.blog-article-content ul,
+.blog-article-content ol {
+  margin-bottom: 1.25rem;
+  padding-left: 1.5rem;
+}
+
+.blog-article-content ul {
+  list-style-type: disc;
+}
+
+.blog-article-content ol {
+  list-style-type: decimal;
+}
+
+.blog-article-content li {
+  margin-bottom: 0.5rem;
+}
+
+.blog-article-content blockquote {
+  border-left: 3px solid #00C853;
+  padding: 0.75rem 1.25rem;
+  margin: 1.75rem 0;
+  background: rgba(0, 200, 83, 0.04);
+  border-radius: 0 0.75rem 0.75rem 0;
+  font-style: italic;
+  color: #E4E4E7;
+}
+
+html.light .blog-article-content blockquote {
+  color: #3F3F46;
+  background: rgba(0, 200, 83, 0.06);
+}
+
+.blog-article-content pre {
+  background: #09090C;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.blog-article-content code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.25rem;
+  color: #00E676;
+}
+
+html.light .blog-article-content code {
+  background: rgba(0, 0, 0, 0.06);
+  color: #00873E;
+}
+
+.blog-article-content pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  color: #A7F3D0;
+}
+
+/* Callout Alert Boxes */
+.callout {
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  margin: 1.5rem 0;
+  font-size: 0.925rem;
+  border-left: 4px solid;
+}
+
+.callout-info {
+  background: rgba(56, 189, 248, 0.08);
+  border-left-color: #38BDF8;
+  color: #BAE6FD;
+}
+
+.callout-tip {
+  background: rgba(0, 200, 83, 0.08);
+  border-left-color: #00C853;
+  color: #A7F3D0;
+}
+
+.callout-warning {
+  background: rgba(245, 158, 11, 0.08);
+  border-left-color: #F59E0B;
+  color: #FDE68A;
+}
+
+.callout-success {
+  background: rgba(16, 185, 129, 0.08);
+  border-left-color: #10B981;
+  color: #A7F3D0;
+}
+
+/* Data Tables */
+.table-container {
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.table-container th {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #00C853;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.table-container td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.table-container tr:last-child td {
+  border-bottom: none;
+}
+
+/* Print Friendly Styles */
+@media print {
+  header, footer, nav, aside, .code-copy-btn, button {
+    display: none !important;
+  }
+  body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+  }
+  .blog-article-content {
+    color: #000000 !important;
+  }
+  .blog-article-content h1,
+  .blog-article-content h2,
+  .blog-article-content h3 {
+    color: #000000 !important;
+  }
+}
+

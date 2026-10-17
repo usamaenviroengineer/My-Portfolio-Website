@@ -29,7 +29,7 @@ export default function Header({ activePage, onNavigate }: HeaderProps) {
     { name: 'Services', id: 'services' },
     { name: 'Portfolio', id: 'portfolio' },
     { name: 'Experience', id: 'experience' },
-    { name: 'Contact', id: 'contact' },
+    { name: 'Blogs', id: 'blogs' },
   ];
 
   const handleNavClick = (id: string) => {
@@ -75,7 +75,7 @@ export default function Header({ activePage, onNavigate }: HeaderProps) {
             : 'bg-white/5 border-white/5'
         }`} id="desktop-navigation">
           {navItems.map((item) => {
-            const isActive = activePage === item.id;
+            const isActive = activePage === item.id || (item.id === 'blogs' && activePage.startsWith('blogs'));
             return (
               <button
                 key={item.id}
@@ -177,7 +177,7 @@ export default function Header({ activePage, onNavigate }: HeaderProps) {
           >
             <div className="px-6 py-8 flex flex-col gap-4">
               {navItems.map((item, idx) => {
-                const isActive = activePage === item.id;
+                const isActive = activePage === item.id || (item.id === 'blogs' && activePage.startsWith('blogs'));
                 return (
                   <motion.button
                     key={item.id}
