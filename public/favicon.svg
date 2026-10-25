@@ -1,36 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <!-- Premium radial glow in background -->
-    <radialGradient id="greenGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#00C853" stop-opacity="0.3"/>
-      <stop offset="100%" stop-color="#0A0A0A" stop-opacity="1"/>
-    </radialGradient>
-    
-    <!-- Linear gradient for the text of monogram -->
-    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFFFFF"/>
-      <stop offset="60%" stop-color="#00C853"/>
-      <stop offset="100%" stop-color="#00E676"/>
+    <!-- Brand Emerald Gradient for Usama Rasheed -->
+    <linearGradient id="ur-brand-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F5A0"/>
+      <stop offset="100%" stop-color="#00C853"/>
     </linearGradient>
   </defs>
 
-  <!-- Grounding circular background -->
-  <rect width="128" height="128" rx="32" fill="#0A0A0A" />
-  <rect width="120" height="120" x="4" y="4" rx="28" fill="url(#greenGlow)" stroke="#00C853" stroke-width="2.5" stroke-opacity="0.4" />
+  <!-- Grounding dark obsidian squircle tile with subtle accent border -->
+  <rect width="128" height="128" rx="28" fill="#0A0E12" stroke="#00C853" stroke-width="2.5" stroke-opacity="0.3"/>
 
-  <!-- Monogram text UR -->
-  <text x="50%" y="78" 
-        font-family="'Inter', sans-serif, system-ui" 
-        font-size="64" 
-        font-weight="900" 
-        fill="url(#brandGrad)" 
-        text-anchor="middle" 
-        letter-spacing="-1">UR</text>
+  <!-- U Monogram Glyph: Balanced modernist geometric horseshoe -->
+  <path d="M 24 34 H 35 V 76 A 7.5 7.5 0 0 0 50 76 V 34 H 61 V 76 A 18.5 18.5 0 0 1 24 76 Z" 
+        fill="url(#ur-brand-gradient)" />
 
-  <!-- Pulse status dot indicator in the top-right -->
-  <circle cx="106" cy="22" r="7" fill="#00C853" />
-  <circle cx="106" cy="22" r="10" fill="none" stroke="#00C853" stroke-width="1.5" opacity="0.6">
-    <animate attributeName="r" values="7;14;7" dur="3s" repeatCount="indefinite" />
-    <animate attributeName="opacity" values="0.8;0;0.8" dur="3s" repeatCount="indefinite" />
-  </circle>
+  <!-- R Monogram Glyph: Architectural spine, geometric bowl & dynamic diagonal leg -->
+  <path fill-rule="evenodd" d="M 68 34 H 91 C 98.5 34 104 39.5 104 48 C 104 54.8 99.5 60.2 93.2 61.6 L 104.5 94 H 92 L 81.8 62 H 79 V 94 H 68 V 34 Z M 79 44 V 52 H 90.5 C 93 52 94 50.8 94 48 C 94 45.2 93 44 90.5 44 H 79 Z" 
+        fill="url(#ur-brand-gradient)" />
 </svg>
