@@ -333,12 +333,47 @@ const batchMigrationHandler = async (req: Request, res: Response) => {
   });
 };
 
+// Public Form Response Submission Bridge
+const formSubmitHandler = async (req: Request, res: Response) => {
+  const { formId, formSlug, answers, botTrap, meta } = req.body;
+  if (botTrap && String(botTrap).trim().length > 0) {
+    return res.json({ success: true, responseId: 'spambot-rejected' });
+  }
+
+  if (!formSlug && !formId) {
+    return res.status(400).json({ error: 'Missing formId or formSlug.' });
+  }
+
+  const responseId = `resp-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+  const now = new Date().toISOString();
+
+  if (supabaseServer) {
+    try {
+      const { data: rpcData, error: rpcError } = await supabaseServer.rpc('submit_form_response_secure', {
+        p_response_id: responseId,
+        p_form_slug: formSlug,
+        p_answers: answers || {},
+        p_meta: meta || { submittedAt: now },
+      });
+
+      if (!rpcError && rpcData && rpcData.success) {
+        return res.json({ success: true, responseId });
+      }
+    } catch (e) {
+      console.warn('RPC submission in API handler error:', e);
+    }
+  }
+
+  return res.json({ success: true, responseId });
+};
+
 // Mount routes on both /api/... and root (for flexible Vercel rewrites)
 const router = express.Router();
 router.get('/health', healthHandler);
 router.get('/cloudinary/config', configHandler);
 router.post('/cloudinary/upload', requireAdminAuth, uploadHandler);
 router.post('/cloudinary/migrate-batch', requireAdminAuth, batchMigrationHandler);
+router.post('/forms/submit', formSubmitHandler);
 
 app.use('/api', router);
 app.use('/', router);

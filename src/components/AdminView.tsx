@@ -34,11 +34,13 @@ import {
   Sparkles,
   Database,
   CloudLightning,
-  BookOpen
+  BookOpen,
+  ClipboardList
 } from 'lucide-react';
 import { uploadImageToCloudinary } from '../services/cloudinaryService';
 import CloudinaryMigrationPanel from './CloudinaryMigrationPanel';
 import BlogManagementPanel from './BlogManagementPanel';
+import FormsManagementPanel from './FormsManagementPanel';
 
 interface AdminViewProps {
   onOpenLiveArticle?: (slug: string) => void;
@@ -771,6 +773,7 @@ export default function AdminView({ onOpenLiveArticle }: AdminViewProps = {}) {
                 { id: 'database', label: 'Database & Health', icon: Database },
                 { id: 'cloudinary', label: 'Cloudinary Migration', icon: CloudLightning },
                 { id: 'blogs', label: 'Blog Management', icon: BookOpen },
+                { id: 'forms', label: 'Forms & Surveys', icon: ClipboardList },
                 { id: 'hero', label: 'Hero & About Bio', icon: Cpu },
                 { id: 'projects', label: 'Dynamic Projects', icon: FolderGit },
                 { id: 'services', label: 'Services Grid', icon: Layers },
@@ -1026,6 +1029,16 @@ CREATE POLICY "Allow authenticated full control contact_messages" ON contact_mes
               {activeTab === 'blogs' && (
                 <BlogManagementPanel
                   onOpenLiveArticle={onOpenLiveArticle}
+                />
+              )}
+
+              {/* 1.7 Forms & Data Collection Management Panel */}
+              {activeTab === 'forms' && (
+                <FormsManagementPanel
+                  onOpenLiveForm={(slug) => {
+                    const cleanSlug = slug.replace(/^\/+/, '');
+                    window.open(`/forms/${cleanSlug}`, '_blank');
+                  }}
                 />
               )}
 

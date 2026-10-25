@@ -11,6 +11,7 @@ import ContactView from './components/ContactView';
 import BlogsView from './components/BlogsView';
 import BlogPostDetailView from './components/BlogPostDetailView';
 import AdminView from './components/AdminView';
+import PublicFormView from './components/Forms/PublicFormView';
 import { ThemeProvider, useTheme } from './ThemeContext';
 import { PortfolioDataProvider } from './PortfolioDataContext';
 
@@ -27,7 +28,7 @@ function MainApp() {
       if (window.location.hash) {
         const hash = window.location.hash.replace('#/', '').replace('#', '');
         if (hash) {
-          if (validPages.includes(hash) || hash.startsWith('blogs/')) {
+          if (validPages.includes(hash) || hash.startsWith('blogs/') || hash.startsWith('forms/')) {
             const cleanPath = hash === 'home' ? '/' : `/${hash}`;
             window.history.replaceState(null, '', cleanPath);
             setActivePage(hash);
@@ -42,7 +43,7 @@ function MainApp() {
       
       if (!route) {
         setActivePage('home');
-      } else if (validPages.includes(route) || route.startsWith('blogs/')) {
+      } else if (validPages.includes(route) || route.startsWith('blogs/') || route.startsWith('forms/')) {
         setActivePage(route);
       } else {
         setActivePage('home');
@@ -74,6 +75,10 @@ function MainApp() {
       const slug = activePage.replace(/^blogs\//, '');
       return <BlogPostDetailView slug={slug} onNavigate={handleNavigate} />;
     }
+    if (activePage.startsWith('forms/')) {
+      const slug = activePage.replace(/^forms\//, '');
+      return <PublicFormView slug={slug} onNavigateHome={() => handleNavigate('home')} />;
+    }
 
     switch (activePage) {
       case 'about':
@@ -95,7 +100,7 @@ function MainApp() {
   };
 
   const isLight = theme === 'light';
-  const showChrome = activePage !== 'admin-usama';
+  const showChrome = activePage !== 'admin-usama' && !activePage.startsWith('forms/');
 
   if (!showChrome) {
     return (
